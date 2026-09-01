@@ -35,6 +35,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree add <branch> [start-point]    Add a worktree for <branch>
   wtree rm <branch>                   Remove a worktree
   wtree list                          List worktrees in this project
+  wtree status                         Show branch/ahead-behind/dirty/identity per worktree
 
 Examples:
   cd ~/Developer/company
@@ -156,11 +157,48 @@ cmd_list() {
   git -C "$root" worktree list
 }
 
+cmd_status() {
+  local root
+  root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
+  root=$(cd "$root" && pwd -P)  # resolve symlinks for comparison with git output
+
+  printf "%-30s %-12s %-8s %s\n" "BRANCH" "AHEAD/BEHIND" "STATE" "IDENTITY"
+
+  git -C "$root" worktree list --porcelain | awk '/^worktree /{print $2}' |
+  while read -r wt; do
+    [[ "$wt" == "$root/.bare" ]] && continue
+
+    local branch upstream ahead behind ab state email
+    branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    upstream=$(git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+
+    if [[ -n "$upstream" ]]; then
+      read -r ahead behind < <(git -C "$wt" rev-list --left-right --count "$branch...$upstream" 2>/dev/null) || true
+      ab="+${ahead:-0}/-${behind:-0}"
+    else
+      ab="no upstream"
+    fi
+
+    if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+      state="${YELLOW}dirty${RESET}"
+    else
+      state="${GREEN}clean${RESET}"
+    fi
+
+    email=$(git -C "$wt" config user.email 2>/dev/null || echo "?")
+
+    printf "%-30s %-12s %-8b %s\n" "$branch" "$ab" "$state" "$email"
+  done || true
+  # ^ a `while read` loop that ends via EOF always exits 1, which would
+  #   trip `set -e` and abort the script right after printing the table.
+}
+
 case "${1:-}" in
   clone)        shift; cmd_clone "$@" ;;
   add)          shift; cmd_add "$@" ;;
   rm)           shift; cmd_rm "$@" ;;
   list|ls)      shift; cmd_list "$@" ;;
+  status)       shift; cmd_status "$@" ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac
