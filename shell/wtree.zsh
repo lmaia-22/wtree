@@ -53,4 +53,4 @@ _wtree() {
       ;;
   esac
 }
-compdef _wtree wtree
+(( $+functions[compdef] )) && compdef _wtree wtree

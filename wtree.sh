@@ -10,10 +10,13 @@
 #   wtree add <branch> [start-point]    Add a worktree for <branch>
 #   wtree rm <branch>                   Remove a worktree
 #   wtree list                          List worktrees in this project
+#   wtree status                        Show branch/ahead-behind/dirty/identity per worktree
+#   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
 #
-# Run "add", "rm" and "list" from anywhere inside a project created with
-# "wtree clone" (i.e. from the project root or from inside any worktree
-# sibling folder) - they walk up to find the .bare directory.
+# Run "add", "rm", "list", "status" and "switch" from anywhere inside a
+# project created with "wtree clone" (i.e. from the project root or from
+# inside any worktree sibling folder) - they walk up to find the .bare
+# directory.
 #
 # Because this repo lives under ~/Developer/company/ or ~/Developer/personal/,
 # git's per-folder includeIf config picks the right identity/SSH key
@@ -35,16 +38,16 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree add <branch> [start-point]    Add a worktree for <branch>
   wtree rm <branch>                   Remove a worktree
   wtree list                          List worktrees in this project
-  wtree status                         Show branch/ahead-behind/dirty/identity per worktree
+  wtree status                        Show branch/ahead-behind/dirty/identity per worktree
   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
 
 Examples:
   cd ~/Developer/company
-  wtree clone git@github.com:mediaprobe/api.git
-  cd api
-  wtree add feature/qpx-v3
-  wtree add hotfix/login origin/main
-  wtree rm feature/qpx-v3
+  wtree clone git@github.com:you/your-repo.git
+  cd your-repo
+  wtree add feature/x
+  wtree add hotfix/y origin/main
+  wtree rm feature/x
 USAGE
 }
 
@@ -169,7 +172,7 @@ cmd_status() {
   while read -r wt; do
     [[ "$wt" == "$root/.bare" ]] && continue
 
-    local branch upstream ahead behind ab state email
+    local branch upstream ahead="" behind="" ab color word email
     branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)
     upstream=$(git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
 
@@ -181,17 +184,18 @@ cmd_status() {
     fi
 
     if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
-      state="${YELLOW}dirty${RESET}"
+      color="$YELLOW"; word="dirty"
     else
-      state="${GREEN}clean${RESET}"
+      color="$GREEN"; word="clean"
     fi
 
     email=$(git -C "$wt" config user.email 2>/dev/null || echo "?")
 
-    printf "%-30s %-12s %-8b %s\n" "$branch" "$ab" "$state" "$email"
+    printf "%-30s %-12s %s%-8s%s %s\n" "$branch" "$ab" "$color" "$word" "$RESET" "$email"
   done || true
-  # ^ a `while read` loop that ends via EOF always exits 1, which would
-  #   trip `set -e` and abort the script right after printing the table.
+  # The loop runs in a pipeline subshell; keeping it on the left of `||`
+  # disables errexit inside the body so one unreadable worktree doesn't
+  # truncate the table.
 }
 
 cmd_switch() {
@@ -200,6 +204,7 @@ cmd_switch() {
   root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
 
   if [[ -z "$branch" ]]; then
+    command -v fzf >/dev/null || die "fzf not found — install it (brew install fzf) or pass a branch name"
     branch=$(
       git -C "$root/.bare" for-each-ref --format='%(refname:short)' refs/heads |
       while read -r b; do if [[ -d "$root/$b" ]]; then echo "$b"; fi; done |

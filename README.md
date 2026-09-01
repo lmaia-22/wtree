@@ -15,25 +15,34 @@ brew tap lmaia-22/wtree
 brew install wtree
 ```
 
-Then source the shell integration for your shell (the formula prints
-this on install too):
+Then add the shell integration line to your shell's rc file (the
+formula prints this on install too) — don't just run it standalone,
+since that only sources it for the current shell session:
 
 ```bash
-# zsh (~/.zshrc)
+# zsh: add this line to ~/.zshrc
 source "$(brew --prefix)/share/wtree/wtree.zsh"
 
-# bash (~/.bashrc)
+# bash: add this line to ~/.bash_profile (macOS Terminal.app reads this
+# for login shells) or ~/.bashrc, depending on which your setup uses
 source "$(brew --prefix)/share/wtree/wtree.bash"
 ```
 
-Restart your shell.
+Then restart your shell (or open a new terminal tab) for it to take effect.
 
 ### Manual
 
 ```bash
-git clone https://github.com/lmaia-22/wtree.git
-ln -s "$PWD/wtree/wtree.sh" ~/bin/wtree   # anywhere on your PATH
-source ~/path/to/wtree/shell/wtree.zsh    # or wtree.bash
+git clone https://github.com/lmaia-22/wtree.git ~/wtree
+mkdir -p ~/bin && ln -s ~/wtree/wtree.sh ~/bin/wtree   # make sure ~/bin is on your PATH
+```
+
+Then add the following `source` line to your shell's rc file (`~/.zshrc`
+for zsh, `~/.bash_profile` or `~/.bashrc` for bash) and restart your
+shell:
+
+```bash
+source ~/wtree/shell/wtree.zsh   # or ~/wtree/shell/wtree.bash
 ```
 
 Requires [`fzf`](https://github.com/junegunn/fzf) for `wtree switch`
