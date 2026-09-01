@@ -36,6 +36,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree rm <branch>                   Remove a worktree
   wtree list                          List worktrees in this project
   wtree status                         Show branch/ahead-behind/dirty/identity per worktree
+  wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
 
 Examples:
   cd ~/Developer/company
@@ -193,12 +194,33 @@ cmd_status() {
   #   trip `set -e` and abort the script right after printing the table.
 }
 
+cmd_switch() {
+  local branch="${1:-}"
+  local root
+  root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
+
+  if [[ -z "$branch" ]]; then
+    branch=$(
+      git -C "$root/.bare" for-each-ref --format='%(refname:short)' refs/heads |
+      while read -r b; do [[ -d "$root/$b" ]] && echo "$b"; done |
+      fzf --prompt="switch> " --preview="git -C '$root'/{} log -1 --oneline 2>/dev/null"
+    ) || exit 1
+    [[ -z "$branch" ]] && exit 1
+  fi
+
+  local dest="$root/$branch"
+  [[ -d "$dest" ]] || die "no worktree for branch '$branch' (try: wtree add $branch)"
+
+  echo "$dest"
+}
+
 case "${1:-}" in
   clone)        shift; cmd_clone "$@" ;;
   add)          shift; cmd_add "$@" ;;
   rm)           shift; cmd_rm "$@" ;;
   list|ls)      shift; cmd_list "$@" ;;
   status)       shift; cmd_status "$@" ;;
+  switch)       shift; cmd_switch "$@" ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac
