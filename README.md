@@ -1,4 +1,4 @@
-# wtree
+# 🌳 wtree
 
 Bare-clone git worktrees, without the ceremony.
 
