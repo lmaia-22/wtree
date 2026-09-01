@@ -172,6 +172,11 @@ cmd_status() {
   while read -r wt; do
     [[ "$wt" == "$root/.bare" ]] && continue
 
+    if [[ ! -d "$wt" ]]; then
+      printf "%-30s %s\n" "${wt#$root/}" "${RED}broken — directory missing (try: git worktree repair, or wtree rm)${RESET}"
+      continue
+    fi
+
     local branch upstream ahead="" behind="" ab color word email
     branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)
     upstream=$(git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
