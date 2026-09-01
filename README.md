@@ -12,6 +12,7 @@ gets its own real directory instead of stashing/switching in place.
 
 ```bash
 brew tap lmaia-22/wtree
+brew trust lmaia-22/wtree   # newer Homebrew requires trusting third-party taps before install
 brew install wtree
 ```
 
@@ -21,11 +22,11 @@ since that only sources it for the current shell session:
 
 ```bash
 # zsh: add this line to ~/.zshrc
-source "$(brew --prefix)/share/wtree/wtree.zsh"
+source "$(brew --prefix)/opt/wtree/share/wtree/wtree.zsh"
 
 # bash: add this line to ~/.bash_profile (macOS Terminal.app reads this
 # for login shells) or ~/.bashrc, depending on which your setup uses
-source "$(brew --prefix)/share/wtree/wtree.bash"
+source "$(brew --prefix)/opt/wtree/share/wtree/wtree.bash"
 ```
 
 Then restart your shell (or open a new terminal tab) for it to take effect.
