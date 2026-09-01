@@ -2,9 +2,7 @@
 
 Bare-clone git worktrees, without the ceremony.
 
-`wtree` sets up a repo using the bare-clone + worktrees pattern
-(https://dev.to/metal3d/git-worktree-like-a-boss-2j1b), so each branch
-gets its own real directory instead of stashing/switching in place.
+`wtree` sets up a repo using the bare-clone + worktrees pattern so each branch gets its own real directory instead of stashing/switching in place.
 
 ## Install
 
