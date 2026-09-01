@@ -202,7 +202,7 @@ cmd_switch() {
   if [[ -z "$branch" ]]; then
     branch=$(
       git -C "$root/.bare" for-each-ref --format='%(refname:short)' refs/heads |
-      while read -r b; do [[ -d "$root/$b" ]] && echo "$b"; done |
+      while read -r b; do if [[ -d "$root/$b" ]]; then echo "$b"; fi; done |
       fzf --prompt="switch> " --preview="git -C '$root'/{} log -1 --oneline 2>/dev/null"
     ) || exit 1
     [[ -z "$branch" ]] && exit 1
