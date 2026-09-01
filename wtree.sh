@@ -82,7 +82,7 @@ cmd_clone() {
 
   info "looking up default branch"
   local default_branch
-  default_branch=$(git ls-remote --symref "$url" HEAD 2>/dev/null | awk '/^ref:/{sub(".*refs/heads/", "", $2); print $2}')
+  default_branch=$(git ls-remote --symref "$url" HEAD | awk '/^ref:/{sub(".*refs/heads/", "", $2); print $2}')
   if [[ -z "$default_branch" ]]; then
     default_branch="main"
   fi
