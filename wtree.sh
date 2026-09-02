@@ -228,7 +228,7 @@ cmd_status() {
 			[[ "$wt" == "$root/.bare" ]] && continue
 
 			if [[ ! -d "$wt" ]]; then
-				printf "%-30s %s\n" "${wt#$root/}" "${RED}broken — directory missing (try: git worktree repair, or wtree rm)${RESET}"
+				printf "%-30s %s\n" "${wt#"$root"/}" "${RED}broken — directory missing (try: git worktree repair, or wtree rm)${RESET}"
 				continue
 			fi
 
@@ -326,7 +326,7 @@ cmd_clean() {
 	local b
 	if [[ ${#broken[@]} -gt 0 ]]; then
 		echo "BROKEN (worktree directory missing — will remove stale registration):"
-		for b in "${broken[@]}"; do echo "  ${b#$root/}"; done
+		for b in "${broken[@]}"; do echo "  ${b#"$root"/}"; done
 		echo
 	fi
 
@@ -355,9 +355,9 @@ cmd_clean() {
 
 	for b in "${broken[@]}"; do
 		if git -C "$root" worktree remove --force "$b" 2>/dev/null; then
-			ok "removed broken worktree '${b#$root/}'"
+			ok "removed broken worktree '${b#"$root"/}'"
 		else
-			echo "${RED}x${RESET} failed to remove '${b#$root/}'" >&2
+			echo "${RED}x${RESET} failed to remove '${b#"$root"/}'" >&2
 		fi
 	done
 	git -C "$root" worktree prune
