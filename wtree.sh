@@ -40,6 +40,7 @@ WHITE=$'\033[1;37m'; GRAY=$'\033[90m'; APPLE=$'\033[38;2;220;40;40m'
 die()  { echo "${RED}x${RESET} $*" >&2; exit 1; }
 info() { echo "${BLUE}->${RESET} $*"; }
 ok()   { echo "${GREEN}v${RESET} $*"; }
+warn() { echo "${YELLOW}!${RESET} $*"; }
 
 banner() {
   cat <<BANNER
@@ -67,6 +68,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
   wtree pr                            Push and open a PR for the current worktree's branch
   wtree ship                          Merge the current branch's PR and clean up (with confirmation)
+  wtree doctor                        Check for optional dependencies (fzf, gh)
   wtree --version                     Print the wtree banner and version
 
 Examples:
@@ -431,6 +433,24 @@ cmd_ship() {
   echo "$landing"
 }
 
+cmd_doctor() {
+  local git_version
+  git_version=$(git --version 2>/dev/null | awk '{print $3}') || die "git not found — wtree requires git"
+  ok "git $git_version"
+
+  if command -v fzf >/dev/null 2>&1; then
+    ok "fzf $(fzf --version 2>/dev/null | awk '{print $1}') (used by: wtree switch, no-argument picker)"
+  else
+    warn "fzf not found — 'wtree switch' with no argument won't work (brew install fzf)"
+  fi
+
+  if command -v gh >/dev/null 2>&1; then
+    ok "gh $(gh --version 2>/dev/null | awk 'NR==1{print $3}') (used by: wtree pr, wtree ship)"
+  else
+    warn "gh not found — 'wtree pr' and 'wtree ship' won't work (brew install gh)"
+  fi
+}
+
 case "${1:-}" in
   clone)        shift; cmd_clone "$@" ;;
   add)          shift; cmd_add "$@" ;;
@@ -441,6 +461,7 @@ case "${1:-}" in
   clean)        shift; cmd_clean "$@" ;;
   pr)           shift; cmd_pr "$@" ;;
   ship)         shift; cmd_ship "$@" ;;
+  doctor)       shift; cmd_doctor "$@" ;;
   -v|--version|version) banner ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
