@@ -69,6 +69,7 @@ wtree switch                     # fzf picker, then cd into your pick
 wtree clean                      # remove broken and already-merged worktrees (with confirmation)
 wtree rm feature/x               # remove a worktree
 wtree list                       # raw `git worktree list`
+wtree --version                  # print the wtree version
 
 cd feature/x
 wtree pr                         # push and open a PR for this branch
