@@ -13,11 +13,15 @@
 #   wtree status                        Show branch/ahead-behind/dirty/identity per worktree
 #   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
 #   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
+#   wtree pr                            Push and open a PR for the current worktree's branch
+#   wtree ship                          Merge the current branch's PR and clean up (with confirmation)
 #
 # Run "add", "rm", "list", "status", "switch" and "clean" from anywhere
 # inside a project created with "wtree clone" (i.e. from the project root
 # or from inside any worktree sibling folder) - they walk up to find the
-# .bare directory.
+# .bare directory. "pr" and "ship" instead operate on whatever branch is
+# checked out where you run them, so run those from inside the specific
+# worktree.
 #
 # Because this repo lives under ~/Developer/company/ or ~/Developer/personal/,
 # git's per-folder includeIf config picks the right identity/SSH key
@@ -25,26 +29,24 @@
 
 set -euo pipefail
 
-RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; RESET=$'\033[0m'
+RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
+TEAL1=$'\033[38;2;0;255;136m'; TEAL2=$'\033[38;2;0;220;160m'
+TEAL3=$'\033[38;2;0;185;180m'; TEAL4=$'\033[38;2;0;150;200m'
+TRUNK1=$'\033[38;2;180;120;60m'; TRUNK2=$'\033[38;2;140;90;40m'
+WHITE=$'\033[1;37m'; GRAY=$'\033[90m'; APPLE=$'\033[38;2;220;40;40m'
 
 die()  { echo "${RED}x${RESET} $*" >&2; exit 1; }
 info() { echo "${BLUE}->${RESET} $*"; }
 ok()   { echo "${GREEN}v${RESET} $*"; }
 
 usage() {
-  cat <<'USAGE'
-                                      ,.,
-                          ,.,       .MMMM.
-                ,.,     .MMMM.    ,MMMMMM.
-      ,.,      MMMMM.  MMMMMMMM  MMMMMMMMM
-     MMMMM    MMMMMMMM MMMMMMMM MMMMMMMMMM
-      "|"       "||"     "||"      "||"
-       |          ||       ||        ||
-  _____|__________||_______||________||_____
- /                                          \
- \__________________________________________/
-
-              w t r e e
+  cat <<USAGE
+   ${TEAL1}⢀⣠⣴⣶⣶⣦⣄⡀${RESET}
+ ${TEAL2}⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀${RESET}     ${WHITE}wtree${RESET}
+${TEAL3}⢠⣿⣿⣿${APPLE}⣿${TEAL3}⣿⣿${APPLE}⣿${TEAL3}⣿⣿⡄${RESET}    ${GRAY}bare-clone git worktrees${RESET}
+ ${TEAL4}⠙⠻⢿⣿⣿⣿⣿⠿⠟⠋${RESET}     ${TEAL3}without the ceremony${RESET}
+      ${TRUNK1}║${RESET}
+      ${TRUNK2}╩${RESET}
 
 wtree - bare-clone git worktrees, without the ceremony
 
@@ -55,6 +57,8 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree status                        Show branch/ahead-behind/dirty/identity per worktree
   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
+  wtree pr                            Push and open a PR for the current worktree's branch
+  wtree ship                          Merge the current branch's PR and clean up (with confirmation)
 
 Examples:
   cd ~/Developer/company
@@ -86,6 +90,21 @@ whoami_here() {
   name=$(git -C "$1" config user.name 2>/dev/null || echo "?")
   email=$(git -C "$1" config user.email 2>/dev/null || echo "?")
   echo "${YELLOW}identity:${RESET} $name <$email>"
+}
+
+# pr/ship operate on "whatever branch is checked out here" rather than an
+# explicit argument, so both need to confirm $PWD is an actual worktree
+# (not the project root or .bare, which have no real checkout) and report
+# which branch that is.
+current_worktree_branch() {
+  local root="$1"
+  local cwd
+  cwd=$(pwd -P)
+  if [[ "$cwd" == "$root" || "$cwd" == "$root/.bare" ]] ||
+     ! git -C "$root" worktree list --porcelain | awk '/^worktree /{print $2}' | grep -qx "$cwd"; then
+    die "run this from inside a specific worktree, not the project root"
+  fi
+  git rev-parse --abbrev-ref HEAD
 }
 
 cmd_clone() {
@@ -326,6 +345,83 @@ cmd_clean() {
   done
 }
 
+cmd_pr() {
+  local root
+  root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
+  root=$(cd "$root" && pwd -P)
+
+  command -v gh >/dev/null || die "gh not found — install it (brew install gh) to use wtree pr"
+
+  local branch
+  branch=$(current_worktree_branch "$root")
+
+  local upstream
+  upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+
+  if [[ -z "$upstream" ]]; then
+    info "pushing '$branch' (setting upstream)"
+    git push -u origin "$branch"
+  else
+    info "pushing '$branch'"
+    git push
+  fi
+
+  gh pr create
+}
+
+cmd_ship() {
+  local root
+  root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
+  root=$(cd "$root" && pwd -P)
+
+  command -v gh >/dev/null || die "gh not found — install it (brew install gh) to use wtree ship"
+
+  local branch
+  branch=$(current_worktree_branch "$root")
+
+  local default_branch
+  default_branch=$(git -C "$root/.bare" symbolic-ref --short HEAD 2>/dev/null || true)
+  [[ "$branch" == "$default_branch" ]] && die "won't ship the default branch ('$default_branch')"
+
+  [[ -z "$(git status --porcelain 2>/dev/null)" ]] ||
+    die "uncommitted changes here — commit, stash, or discard them before shipping"
+
+  local pr_number pr_title pr_url
+  pr_number=$(gh pr view --json number -q .number 2>/dev/null) || die "no open PR for '$branch' (try: wtree pr)"
+  pr_title=$(gh pr view --json title -q .title 2>/dev/null)
+  pr_url=$(gh pr view --json url -q .url 2>/dev/null)
+
+  echo "PR #$pr_number: $pr_title" >&2
+  echo "  $pr_url" >&2
+
+  local reply
+  read -r -p "Merge and ship this PR? [y/N] " reply || reply="n"
+  [[ "$reply" =~ ^[Yy]$ ]] || { echo "aborted" >&2; exit 1; }
+
+  echo "merging..." >&2
+  gh pr merge "$pr_number" >&2 || true
+  # gh pr merge's own post-merge housekeeping tries to switch the local
+  # checkout to the base branch, which always fails here because the base
+  # branch already has its own worktree - so its exit code isn't
+  # trustworthy. Verify the merge actually happened independently, and
+  # handle branch deletion ourselves rather than relying on --delete-branch
+  # (which never gets that far when the housekeeping step fails first).
+
+  local merged_at
+  merged_at=$(gh pr view "$pr_number" --json mergedAt -q .mergedAt 2>/dev/null || true)
+  [[ -n "$merged_at" && "$merged_at" != "null" ]] || die "PR #$pr_number was not merged"
+
+  git -C "$root" push origin --delete "$branch" >&2 2>&1 || true
+
+  git -C "$root" worktree remove "$branch"
+  git -C "$root/.bare" branch -D "$branch" >/dev/null 2>&1 || true
+
+  local landing="$root/$default_branch"
+  [[ -d "$landing" ]] || landing="$root"
+
+  echo "$landing"
+}
+
 case "${1:-}" in
   clone)        shift; cmd_clone "$@" ;;
   add)          shift; cmd_add "$@" ;;
@@ -334,6 +430,8 @@ case "${1:-}" in
   status)       shift; cmd_status "$@" ;;
   switch)       shift; cmd_switch "$@" ;;
   clean)        shift; cmd_clean "$@" ;;
+  pr)           shift; cmd_pr "$@" ;;
+  ship)         shift; cmd_ship "$@" ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac

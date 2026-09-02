@@ -1,18 +1,10 @@
 ```
-                                      ,.,
-                          ,.,       .MMMM.
-                ,.,     .MMMM.    ,MMMMMM.
-      ,.,      MMMMM.  MMMMMMMM  MMMMMMMMM
-     MMMMM    MMMMMMMM MMMMMMMM MMMMMMMMMM
-      "|"       "||"     "||"      "||"
-       |          ||       ||        ||
-  _____|__________||_______||________||_____
- /                                          \
- \__________________________________________/
-
-              w t r e e
-     bare-clone git worktrees,
-        without the ceremony.
+   ⢀⣠⣴⣶⣶⣦⣄⡀
+ ⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀     wtree
+⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄    bare-clone git worktrees
+ ⠙⠻⢿⣿⣿⣿⣿⠿⠟⠋     without the ceremony
+      ║
+      ╩
 ```
 
 `wtree` sets up a repo using the bare-clone + worktrees pattern so each branch gets its own real directory instead of stashing/switching in place.
@@ -58,7 +50,8 @@ source ~/wtree/shell/wtree.zsh   # or ~/wtree/shell/wtree.bash
 ```
 
 Requires [`fzf`](https://github.com/junegunn/fzf) for `wtree switch`
-with no argument.
+with no argument, and [`gh`](https://cli.github.com/) for `wtree pr`
+and `wtree ship`.
 
 ## Usage
 
@@ -71,13 +64,20 @@ wtree add hotfix/y origin/main   # new worktree, branched from origin/main
 wtree status                     # branch / ahead-behind / dirty / identity, per worktree
 wtree switch feature/x           # cd into that worktree (shell integration required)
 wtree switch                     # fzf picker, then cd into your pick
+wtree clean                      # remove broken and already-merged worktrees (with confirmation)
 wtree rm feature/x               # remove a worktree
 wtree list                       # raw `git worktree list`
+
+cd feature/x
+wtree pr                         # push and open a PR for this branch
+wtree ship                       # merge the PR and clean up (with confirmation)
 ```
 
-Run `add`, `rm`, `status`, `switch`, and `list` from anywhere inside a
-project created with `wtree clone` — they walk up to find the project
-root automatically.
+Run `add`, `rm`, `status`, `switch`, `clean`, and `list` from anywhere
+inside a project created with `wtree clone` — they walk up to find the
+project root automatically. `pr` and `ship` instead operate on whatever
+branch is checked out where you run them, so run those from inside the
+specific worktree.
 
 ## Why
 

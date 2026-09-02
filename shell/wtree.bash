@@ -4,7 +4,7 @@
 
 wtree() {
   case "${1:-}" in
-    switch)
+    switch|ship)
       local dest
       dest="$(command wtree "$@")" || return $?
       [[ -n "$dest" ]] && cd "$dest"
@@ -42,7 +42,7 @@ _wtree_complete() {
   local cur
   cur="${COMP_WORDS[COMP_CWORD]}"
   if [[ $COMP_CWORD -eq 1 ]]; then
-    COMPREPLY=($(compgen -W "clone add rm status switch list" -- "$cur"))
+    COMPREPLY=($(compgen -W "clone add rm status switch list clean pr ship" -- "$cur"))
     return
   fi
   case "${COMP_WORDS[1]}" in

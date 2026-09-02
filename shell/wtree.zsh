@@ -4,7 +4,7 @@
 
 wtree() {
   case "${1:-}" in
-    switch)
+    switch|ship)
       local dest
       dest="$(command wtree "$@")" || return $?
       [[ -n "$dest" ]] && cd "$dest"
@@ -40,7 +40,7 @@ _wtree_branches() {
 
 _wtree() {
   local -a subcmds
-  subcmds=(clone add rm status switch list)
+  subcmds=(clone add rm status switch list clean pr ship)
 
   if (( CURRENT == 2 )); then
     compadd -a subcmds
