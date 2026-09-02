@@ -353,22 +353,26 @@ cmd_clean() {
 		return
 	}
 
-	for b in "${broken[@]}"; do
-		if git -C "$root" worktree remove --force "$b" 2>/dev/null; then
-			ok "removed broken worktree '${b#"$root"/}'"
-		else
-			echo "${RED}x${RESET} failed to remove '${b#"$root"/}'" >&2
-		fi
-	done
-	git -C "$root" worktree prune
+	if [[ ${#broken[@]} -gt 0 ]]; then
+		for b in "${broken[@]}"; do
+			if git -C "$root" worktree remove --force "$b" 2>/dev/null; then
+				ok "removed broken worktree '${b#"$root"/}'"
+			else
+				echo "${RED}x${RESET} failed to remove '${b#"$root"/}'" >&2
+			fi
+		done
+		git -C "$root" worktree prune
+	fi
 
-	for b in "${merged[@]}"; do
-		if git -C "$root" worktree remove "$b" 2>/dev/null && git -C "$root/.bare" branch -D "$b" >/dev/null 2>&1; then
-			ok "removed merged worktree and branch '$b'"
-		else
-			echo "${RED}x${RESET} failed to fully clean '$b'" >&2
-		fi
-	done
+	if [[ ${#merged[@]} -gt 0 ]]; then
+		for b in "${merged[@]}"; do
+			if git -C "$root" worktree remove "$b" 2>/dev/null && git -C "$root/.bare" branch -D "$b" >/dev/null 2>&1; then
+				ok "removed merged worktree and branch '$b'"
+			else
+				echo "${RED}x${RESET} failed to fully clean '$b'" >&2
+			fi
+		done
+	fi
 }
 
 cmd_pr() {
