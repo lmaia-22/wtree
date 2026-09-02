@@ -44,7 +44,7 @@ ok()   { echo "${GREEN}v${RESET} $*"; }
 usage() {
   cat <<USAGE
    ${TEAL1}⢀⣠⣴⣶⣶⣦⣄⡀${RESET}
- ${TEAL2}⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀${RESET}     ${WHITE}wtree${RESET}
+ ${TEAL2}⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀${RESET}     ${WHITE}wtree${RESET} ${GRAY}v${VERSION}${RESET}
 ${TEAL3}⢠⣿⣿⣿${APPLE}⣿${TEAL3}⣿⣿${APPLE}⣿${TEAL3}⣿⣿⡄${RESET}    ${GRAY}bare-clone git worktrees${RESET}
  ${TEAL4}⠙⠻⢿⣿⣿⣿⣿⠿⠟⠋${RESET}     ${TEAL3}without the ceremony${RESET}
       ${TRUNK1}║${RESET}
