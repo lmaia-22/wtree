@@ -29,6 +29,8 @@
 
 set -euo pipefail
 
+VERSION="0.1.0"
+
 RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
 TEAL1=$'\033[38;2;0;255;136m'; TEAL2=$'\033[38;2;0;220;160m'
 TEAL3=$'\033[38;2;0;185;180m'; TEAL4=$'\033[38;2;0;150;200m'
@@ -59,6 +61,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
   wtree pr                            Push and open a PR for the current worktree's branch
   wtree ship                          Merge the current branch's PR and clean up (with confirmation)
+  wtree --version                     Print the wtree version
 
 Examples:
   cd ~/Developer/company
@@ -432,6 +435,7 @@ case "${1:-}" in
   clean)        shift; cmd_clean "$@" ;;
   pr)           shift; cmd_pr "$@" ;;
   ship)         shift; cmd_ship "$@" ;;
+  -v|--version|version) echo "wtree $VERSION" ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac
