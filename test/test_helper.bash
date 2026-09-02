@@ -72,3 +72,25 @@ wtree_drop_fzf_from_path() {
   IFS="$oldifs"
   PATH="$newpath"
 }
+
+# Creates a throwaway bare "origin" repo with one commit on $1 (default
+# "main"), plus a normal (non-bare, non-wtree) clone of it at
+# $BATS_TEST_TMPDIR/repo — this is the "existing repo" `wtree init`
+# operates on. cd's into that clone. Sets ORIGIN_DIR and REPO_DIR.
+wtree_setup_plain_repo() {
+  export HOME="$BATS_TEST_TMPDIR/home"
+  mkdir -p "$HOME"
+
+  local default_branch="${1:-main}"
+  cd "$BATS_TEST_TMPDIR"
+  mkdir origin.git
+  git -C origin.git init -q --bare --initial-branch="$default_branch"
+
+  git clone -q origin.git repo
+  git -c user.name=test -c user.email=test@test.invalid -C repo commit -q --allow-empty -m init
+  git -C repo push -q origin "$default_branch"
+
+  ORIGIN_DIR="$(cd "$BATS_TEST_TMPDIR/origin.git" && pwd -P)"
+  REPO_DIR="$(cd "$BATS_TEST_TMPDIR/repo" && pwd -P)"
+  cd "$REPO_DIR"
+}

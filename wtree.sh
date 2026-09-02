@@ -235,6 +235,51 @@ run_add_hook() {
 	fi
 }
 
+cmd_init() {
+	local name="${1:-}"
+
+	git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
+	[[ "$(git rev-parse --is-bare-repository)" == "true" ]] && die "already a bare repository"
+
+	local src
+	src=$(git rev-parse --show-toplevel)
+
+	local existing_root
+	if existing_root=$(find_project_root); then
+		die "already a wtree project (found .bare at $existing_root)"
+	fi
+
+	git -C "$src" symbolic-ref -q HEAD >/dev/null || die "HEAD is detached — check out a branch before running wtree init"
+
+	local dirty
+	dirty=$(git -C "$src" status --porcelain)
+	if [[ -n "$dirty" ]]; then
+		die "working tree is dirty — commit or stash your changes first:
+$dirty"
+	fi
+	if [[ -n "$(git -C "$src" stash list)" ]]; then
+		die "you have a stash entry — commit or drop it first (git -C $src stash list)"
+	fi
+
+	local origin_url
+	# shellcheck disable=SC2034 # consumed by the Task 3 happy path
+	origin_url=$(git -C "$src" remote get-url origin 2>/dev/null) || die "no 'origin' remote configured — wtree init requires one"
+
+	local branch
+	branch=$(git -C "$src" rev-parse --abbrev-ref HEAD)
+
+	local target="$name"
+	[[ -z "$target" ]] && target="$(basename "$src")-wtree"
+	local target_path
+	target_path="$(dirname "$src")/$target"
+
+	[[ -e "$target_path" ]] && die "'$target' already exists"
+
+	# TODO(Task 3): mkdir/cd into $target_path, bare_clone_into "$src",
+	# fix up origin, fetch, worktree add "$branch", upstream tracking,
+	# success messages.
+}
+
 cmd_rm() {
 	local branch="${1:?branch name required}"
 	local root
@@ -512,6 +557,10 @@ case "${1:-}" in
 clone)
 	shift
 	cmd_clone "$@"
+	;;
+init)
+	shift
+	cmd_init "$@"
 	;;
 add)
 	shift
