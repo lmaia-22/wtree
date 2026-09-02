@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - run: shellcheck wtree.sh shell/wtree.bash
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo snap install shfmt
+      - run: shfmt -d wtree.sh shell/wtree.bash
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: bats-core/bats-action@4.0.0
+      - name: Install fzf and gh
+        run: |
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            brew install fzf gh
+          else
+            sudo apt-get update
+            sudo apt-get install -y fzf gh
+          fi
+      - name: zsh syntax check
+        run: zsh -n shell/wtree.zsh
+      - run: bats test/

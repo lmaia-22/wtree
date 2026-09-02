@@ -90,6 +90,23 @@ is a real directory, `status` gives you an at-a-glance view across all
 of them, and `switch` (with shell integration) makes moving between
 them a single command.
 
+## Development
+
+Requires [`bats-core`](https://github.com/bats-core/bats-core),
+[`shellcheck`](https://www.shellcheck.net/), and
+[`shfmt`](https://github.com/mvdan/sh) — `brew install bats-core
+shellcheck shfmt`.
+
+```bash
+bats test/                             # run the test suite
+shellcheck wtree.sh shell/wtree.bash   # lint (zsh isn't shellcheck-compatible)
+shfmt -d wtree.sh shell/wtree.bash     # check formatting
+shfmt -w wtree.sh shell/wtree.bash     # auto-format
+```
+
+CI runs all of the above (plus a `zsh -n` syntax check) on every push
+and PR, on both Linux and macOS.
+
 ## License
 
 MIT
