@@ -483,15 +483,18 @@ cmd_pr() {
 	local branch
 	branch=$(current_worktree_branch "$root")
 
-	local upstream
-	upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
-
-	if [[ -z "$upstream" ]]; then
-		info "pushing '$branch' (setting upstream)"
-		git push -u origin "$branch"
-	else
+	# Check for a matching remote branch by name, not merely "does an
+	# upstream exist" - `wtree add <branch> <remote-branch>` lets git's own
+	# branch.autoSetupMerge track a differently-named start point (e.g.
+	# `wtree add hotfix/y origin/dev` tracks origin/dev), and a plain
+	# `git push` then fails because the upstream's name doesn't match the
+	# branch's own name.
+	if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
 		info "pushing '$branch'"
 		git push
+	else
+		info "pushing '$branch' (setting upstream)"
+		git push -u origin "$branch"
 	fi
 
 	gh pr create

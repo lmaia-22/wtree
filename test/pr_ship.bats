@@ -69,6 +69,33 @@ setup() {
   [[ "$output" != *"setting upstream"* ]]
 }
 
+@test "pr pushes with -u when the branch's upstream has a different name than the branch itself" {
+  # Regression test: `wtree add <branch> <remote-branch>` lets git's own
+  # default branch.autoSetupMerge behavior set the new branch's upstream
+  # to the *start point*, even when its name differs from the new
+  # branch's name (e.g. `wtree add hotfix/y origin/dev` tracks
+  # origin/dev, not origin/hotfix/y). `pr` used to treat "any upstream
+  # configured" as "safe to plain `git push`", which fails with git's
+  # "upstream branch does not match the name of your current branch"
+  # error in exactly this case.
+  wtree_setup_project
+  git -C main push -q origin main:dev
+  "$WTREE_BIN" add hotfix/y origin/dev >/dev/null
+  cd hotfix/y
+
+  run git rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$output" = "origin/dev" ]
+
+  wtree_install_gh_mock
+  export GH_MOCK_PR_URL="https://example.invalid/pr/9"
+
+  run "$WTREE_BIN" pr
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pr/9"* ]]
+  run git rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$output" = "origin/hotfix/y" ]
+}
+
 # ── ship, with mocked gh ──
 
 @test "ship dies with a clear message when gh pr view finds no PR" {
