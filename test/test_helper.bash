@@ -19,7 +19,7 @@ wtree_setup_project() {
   git -C origin.git init -q --bare --initial-branch="$default_branch"
 
   git clone -q origin.git seed
-  git -C seed commit -q --allow-empty -m init
+  git -c user.name=test -c user.email=test@test.invalid -C seed commit -q --allow-empty -m init
   git -C seed push -q origin "$default_branch"
   rm -rf seed
 

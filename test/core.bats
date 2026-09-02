@@ -78,8 +78,7 @@ setup() {
   run "$WTREE_BIN" rm feature/x
   [ "$status" -eq 0 ]
   [ ! -d "$PROJECT_ROOT/feature/x" ]
-  run git worktree list --porcelain
-  [[ "$output" != *"feature/x"* ]]
+  [ ! -d "$PROJECT_ROOT/.bare/worktrees/feature/x" ]
 }
 
 @test "add works from a subdirectory of the project, not just the root" {
