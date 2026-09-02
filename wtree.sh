@@ -31,7 +31,7 @@ set -euo pipefail
 
 VERSION="0.1.0"
 
-RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; BOLD=$'\033[1m'; RESET=$'\033[0m'
+RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; RESET=$'\033[0m'
 TEAL1=$'\033[38;2;0;255;136m'; TEAL2=$'\033[38;2;0;220;160m'
 TEAL3=$'\033[38;2;0;185;180m'; TEAL4=$'\033[38;2;0;150;200m'
 TRUNK1=$'\033[38;2;180;120;60m'; TRUNK2=$'\033[38;2;140;90;40m'
@@ -218,7 +218,7 @@ cmd_status() {
     [[ "$wt" == "$root/.bare" ]] && continue
 
     if [[ ! -d "$wt" ]]; then
-      printf "%-30s %s\n" "${wt#$root/}" "${RED}broken — directory missing (try: git worktree repair, or wtree rm)${RESET}"
+      printf "%-30s %s\n" "${wt#"$root"/}" "${RED}broken — directory missing (try: git worktree repair, or wtree rm)${RESET}"
       continue
     fi
 
@@ -314,7 +314,7 @@ cmd_clean() {
   local b
   if [[ ${#broken[@]} -gt 0 ]]; then
     echo "BROKEN (worktree directory missing — will remove stale registration):"
-    for b in "${broken[@]}"; do echo "  ${b#$root/}"; done
+    for b in "${broken[@]}"; do echo "  ${b#"$root"/}"; done
     echo
   fi
 
@@ -340,9 +340,9 @@ cmd_clean() {
 
   for b in "${broken[@]}"; do
     if git -C "$root" worktree remove --force "$b" 2>/dev/null; then
-      ok "removed broken worktree '${b#$root/}'"
+      ok "removed broken worktree '${b#"$root"/}'"
     else
-      echo "${RED}x${RESET} failed to remove '${b#$root/}'" >&2
+      echo "${RED}x${RESET} failed to remove '${b#"$root"/}'" >&2
     fi
   done
   git -C "$root" worktree prune

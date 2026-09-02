@@ -7,12 +7,14 @@ wtree() {
     switch|ship)
       local dest
       dest="$(command wtree "$@")" || return $?
-      [[ -n "$dest" ]] && cd "$dest"
+      [[ -n "$dest" ]] || return 0
+      cd "$dest" || return $?
       ;;
     "")
       local dest
       dest="$(command wtree switch)" || return $?
-      [[ -n "$dest" ]] && cd "$dest"
+      [[ -n "$dest" ]] || return 0
+      cd "$dest" || return $?
       ;;
     *)
       command wtree "$@"
@@ -42,12 +44,12 @@ _wtree_complete() {
   local cur
   cur="${COMP_WORDS[COMP_CWORD]}"
   if [[ $COMP_CWORD -eq 1 ]]; then
-    COMPREPLY=($(compgen -W "clone add rm status switch list clean pr ship" -- "$cur"))
+    mapfile -t COMPREPLY < <(compgen -W "clone add rm status switch list clean pr ship" -- "$cur")
     return
   fi
   case "${COMP_WORDS[1]}" in
     switch|rm|add)
-      COMPREPLY=($(compgen -W "$(_wtree_branches)" -- "$cur"))
+      mapfile -t COMPREPLY < <(compgen -W "$(_wtree_branches)" -- "$cur")
       ;;
   esac
 }
