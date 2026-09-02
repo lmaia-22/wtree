@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 220" width="240" height="220">
+  <defs>
+    <linearGradient id="canopy" x1="0" y1="30" x2="0" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00ff88"/>
+      <stop offset="55%" stop-color="#00d9a0"/>
+      <stop offset="100%" stop-color="#00b9b4"/>
+    </linearGradient>
+    <linearGradient id="trunk" x1="0" y1="150" x2="0" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#b47838"/>
+      <stop offset="100%" stop-color="#8c5a28"/>
+    </linearGradient>
+  </defs>
+
+  <!-- canopy: overlapping blobs, same gradient, no seams -->
+  <circle cx="120" cy="62" r="30" fill="url(#canopy)"/>
+  <circle cx="82"  cy="94" r="40" fill="url(#canopy)"/>
+  <circle cx="158" cy="94" r="40" fill="url(#canopy)"/>
+  <ellipse cx="120" cy="118" rx="72" ry="34" fill="url(#canopy)"/>
+
+  <!-- trunk -->
+  <path d="M112 150 L108 208 Q120 216 132 208 L128 150 Z" fill="url(#trunk)"/>
+
+  <!-- apples -->
+  <circle cx="96"  cy="100" r="9" fill="#e42c2c"/>
+  <circle cx="93"  cy="97"  r="3" fill="#ff8a8a"/>
+  <circle cx="150" cy="108" r="9" fill="#e42c2c"/>
+  <circle cx="147" cy="105" r="3" fill="#ff8a8a"/>
+</svg>

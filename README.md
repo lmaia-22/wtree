@@ -1,11 +1,9 @@
-```
-   ⢀⣠⣴⣶⣶⣦⣄⡀
- ⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀     wtree
-⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄    bare-clone git worktrees
- ⠙⠻⢿⣿⣿⣿⣿⠿⠟⠋     without the ceremony
-      ║
-      ╩
-```
+<p align="center">
+  <img src="logo.svg" width="140" alt="wtree logo">
+</p>
+
+<h1 align="center">wtree</h1>
+<p align="center">bare-clone git worktrees, without the ceremony.</p>
 
 `wtree` sets up a repo using the bare-clone + worktrees pattern so each branch gets its own real directory instead of stashing/switching in place.
 
