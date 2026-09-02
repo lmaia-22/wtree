@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Mock `gh` for pr_ship.bats. Dispatches on subcommand; behavior is
+# controlled entirely by environment variables the test sets before
+# invoking wtree, so each test can script exactly the gh responses it
+# needs without touching real GitHub. An invocation this mock doesn't
+# recognize fails loudly (exit 99) rather than silently no-op'ing, so
+# the mock also asserts wtree calls gh with the arguments it expects.
+set -euo pipefail
+
+case "${1:-} ${2:-}" in
+"pr view")
+  shift 2
+  [[ "${GH_MOCK_PR_VIEW_FAIL:-0}" == "1" ]] && exit 1
+
+  json_field=""
+  prev=""
+  for arg in "$@"; do
+    [[ "$prev" == "--json" ]] && json_field="$arg"
+    prev="$arg"
+  done
+
+  case "$json_field" in
+  number) echo "${GH_MOCK_PR_NUMBER:-1}" ;;
+  title) echo "${GH_MOCK_PR_TITLE:-mock pr}" ;;
+  url) echo "${GH_MOCK_PR_URL:-https://example.invalid/pr/1}" ;;
+  mergedAt) echo "${GH_MOCK_MERGED_AT:-null}" ;;
+  *)
+    echo "gh-mock: pr view with unrecognized --json field: $json_field" >&2
+    exit 99
+    ;;
+  esac
+  ;;
+"pr merge")
+  exit "${GH_MOCK_MERGE_EXIT:-0}"
+  ;;
+"pr create")
+  echo "${GH_MOCK_PR_URL:-https://example.invalid/pr/1}"
+  ;;
+*)
+  echo "gh-mock: unexpected invocation: $*" >&2
+  exit 99
+  ;;
+esac
