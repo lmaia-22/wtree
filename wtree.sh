@@ -32,6 +32,19 @@ ok()   { echo "${GREEN}v${RESET} $*"; }
 
 usage() {
   cat <<'USAGE'
+                                      ,.,
+                          ,.,       .MMMM.
+                ,.,     .MMMM.    ,MMMMMM.
+      ,.,      MMMMM.  MMMMMMMM  MMMMMMMMM
+     MMMMM    MMMMMMMM MMMMMMMM MMMMMMMMMM
+      "|"       "||"     "||"      "||"
+       |          ||       ||        ||
+  _____|__________||_______||________||_____
+ /                                          \
+ \__________________________________________/
+
+              w t r e e
+
 wtree - bare-clone git worktrees, without the ceremony
 
   wtree clone <repo-url> [dir-name]   Set up a new worktree-ready project
