@@ -23,7 +23,7 @@ setup() {
 
 @test "switch with no argument and no fzf on PATH fails with a clear message" {
   wtree_setup_project
-  PATH=/usr/bin:/bin
+  wtree_drop_fzf_from_path
 
   run --separate-stderr "$WTREE_BIN" switch
   [ "$status" -ne 0 ]

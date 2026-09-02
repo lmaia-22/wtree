@@ -16,7 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo snap install shfmt
+      - run: |
+          curl -fsSL -o /usr/local/bin/shfmt \
+            https://github.com/mvdan/sh/releases/download/v3.14.0/shfmt_v3.14.0_linux_amd64
+          chmod +x /usr/local/bin/shfmt
       - run: shfmt -d wtree.sh shell/wtree.bash
 
   test:
@@ -28,13 +31,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: bats-core/bats-action@4.0.0
-      - name: Install fzf and gh
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          support-install: false
+          assert-install: false
+          detik-install: false
+          file-install: false
+      - name: Install gh
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            brew install fzf gh
+            brew install gh
           else
             sudo apt-get update
-            sudo apt-get install -y fzf gh
+            sudo apt-get install -y gh zsh
           fi
       - name: zsh syntax check
         run: zsh -n shell/wtree.zsh

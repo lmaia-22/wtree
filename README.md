@@ -93,9 +93,13 @@ them a single command.
 ## Development
 
 Requires [`bats-core`](https://github.com/bats-core/bats-core),
-[`shellcheck`](https://www.shellcheck.net/), and
-[`shfmt`](https://github.com/mvdan/sh) — `brew install bats-core
-shellcheck shfmt`.
+[`shellcheck`](https://www.shellcheck.net/), [`shfmt`](https://github.com/mvdan/sh),
+[`gh`](https://cli.github.com/), and `zsh` — `brew install bats-core
+shellcheck shfmt gh zsh` (zsh ships with macOS already; the brew formula
+is only needed on Linux). `gh` is required even to run the guard-clause
+tests in `pr_ship.bats`, since `cmd_pr`/`cmd_ship` check for it before
+anything else, and `zsh` is required for `shell_integration.bats` to run
+at all.
 
 ```bash
 bats test/                             # run the test suite

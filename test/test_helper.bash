@@ -13,6 +13,12 @@ WTREE_ROOT="$(dirname "$WTREE_BIN")"
 # "main"), clones it with wtree, and cd's into the resulting project
 # root. Prints nothing; sets PROJECT_ROOT for the caller.
 wtree_setup_project() {
+  # Isolated HOME so a contributor's ambient global git config (e.g.
+  # commit.gpgsign = true) can't leak into the test commits below and
+  # produce a confusing, unrelated failure.
+  export HOME="$BATS_TEST_TMPDIR/home"
+  mkdir -p "$HOME"
+
   local default_branch="${1:-main}"
   cd "$BATS_TEST_TMPDIR"
   mkdir origin.git
@@ -50,4 +56,19 @@ wtree_install_on_path() {
 # Behavior is controlled by GH_MOCK_* env vars set by the calling test.
 wtree_install_gh_mock() {
   PATH="$WTREE_ROOT/test/fixtures/gh-mock:$PATH"
+}
+
+# Strips any PATH entry containing a real fzf executable, so tests that
+# need fzf's absence work regardless of where the machine happens to
+# have it installed (e.g. Ubuntu's apt package puts it at /usr/bin/fzf,
+# which a naive `PATH=/usr/bin:/bin` restriction would still find).
+wtree_drop_fzf_from_path() {
+  local newpath="" d oldifs="$IFS"
+  IFS=:
+  for d in $PATH; do
+    [[ -x "$d/fzf" ]] && continue
+    newpath="${newpath:+$newpath:}$d"
+  done
+  IFS="$oldifs"
+  PATH="$newpath"
 }
