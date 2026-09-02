@@ -12,11 +12,12 @@
 #   wtree list                          List worktrees in this project
 #   wtree status                        Show branch/ahead-behind/dirty/identity per worktree
 #   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
+#   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
 #
-# Run "add", "rm", "list", "status" and "switch" from anywhere inside a
-# project created with "wtree clone" (i.e. from the project root or from
-# inside any worktree sibling folder) - they walk up to find the .bare
-# directory.
+# Run "add", "rm", "list", "status", "switch" and "clean" from anywhere
+# inside a project created with "wtree clone" (i.e. from the project root
+# or from inside any worktree sibling folder) - they walk up to find the
+# .bare directory.
 #
 # Because this repo lives under ~/Developer/company/ or ~/Developer/personal/,
 # git's per-folder includeIf config picks the right identity/SSH key
@@ -53,6 +54,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree list                          List worktrees in this project
   wtree status                        Show branch/ahead-behind/dirty/identity per worktree
   wtree switch [branch]               Print path to a worktree (fzf picker if no branch given)
+  wtree clean                         Remove broken and already-merged worktrees (with confirmation)
 
 Examples:
   cd ~/Developer/company
@@ -237,6 +239,93 @@ cmd_switch() {
   echo "$dest"
 }
 
+cmd_clean() {
+  local root
+  root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
+  root=$(cd "$root" && pwd -P)
+
+  info "fetching latest (--prune)"
+  git -C "$root" fetch origin --prune --quiet
+
+  local broken=() merged=() dirty=()
+  local wt
+
+  while read -r wt; do
+    [[ "$wt" == "$root/.bare" ]] && continue
+
+    if [[ ! -d "$wt" ]]; then
+      broken+=("$wt")
+      continue
+    fi
+
+    local branch upstream
+    branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    upstream=$(git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+
+    [[ -z "$upstream" ]] && continue  # never pushed - no remote signal, leave it alone
+
+    git -C "$wt" rev-parse --verify --quiet "$upstream" >/dev/null 2>&1 && continue  # remote branch still exists
+
+    if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+      dirty+=("$branch")
+    else
+      merged+=("$branch")
+    fi
+  done < <(git -C "$root" worktree list --porcelain | awk '/^worktree /{print $2}') || true
+  # Same reasoning as cmd_status: keeping the loop on the left of `||`
+  # disables errexit inside the body so one unreadable worktree doesn't
+  # abort detection partway through.
+
+  if [[ ${#broken[@]} -eq 0 && ${#merged[@]} -eq 0 && ${#dirty[@]} -eq 0 ]]; then
+    ok "nothing to clean"
+    return
+  fi
+
+  local b
+  if [[ ${#broken[@]} -gt 0 ]]; then
+    echo "BROKEN (worktree directory missing — will remove stale registration):"
+    for b in "${broken[@]}"; do echo "  ${b#$root/}"; done
+    echo
+  fi
+
+  if [[ ${#merged[@]} -gt 0 ]]; then
+    echo "MERGED (remote branch gone — will remove worktree + delete local branch):"
+    printf "  %s\n" "${merged[@]}"
+    echo
+  fi
+
+  if [[ ${#dirty[@]} -gt 0 ]]; then
+    echo "SKIPPED (merged but has uncommitted changes — clean up manually):"
+    printf "  %s\n" "${dirty[@]}"
+    echo
+  fi
+
+  if [[ ${#broken[@]} -eq 0 && ${#merged[@]} -eq 0 ]]; then
+    return
+  fi
+
+  local reply
+  read -r -p "Clean ${#broken[@]} broken and ${#merged[@]} merged worktrees? [y/N] " reply || reply="n"
+  [[ "$reply" =~ ^[Yy]$ ]] || { echo "aborted"; return; }
+
+  for b in "${broken[@]}"; do
+    if git -C "$root" worktree remove --force "$b" 2>/dev/null; then
+      ok "removed broken worktree '${b#$root/}'"
+    else
+      echo "${RED}x${RESET} failed to remove '${b#$root/}'" >&2
+    fi
+  done
+  git -C "$root" worktree prune
+
+  for b in "${merged[@]}"; do
+    if git -C "$root" worktree remove "$b" 2>/dev/null && git -C "$root/.bare" branch -D "$b" >/dev/null 2>&1; then
+      ok "removed merged worktree and branch '$b'"
+    else
+      echo "${RED}x${RESET} failed to fully clean '$b'" >&2
+    fi
+  done
+}
+
 case "${1:-}" in
   clone)        shift; cmd_clone "$@" ;;
   add)          shift; cmd_add "$@" ;;
@@ -244,6 +333,7 @@ case "${1:-}" in
   list|ls)      shift; cmd_list "$@" ;;
   status)       shift; cmd_status "$@" ;;
   switch)       shift; cmd_switch "$@" ;;
+  clean)        shift; cmd_clean "$@" ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac
