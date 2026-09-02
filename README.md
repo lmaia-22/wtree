@@ -60,6 +60,7 @@ and `wtree ship`.
 ```bash
 cd ~/Developer/some-folder
 wtree clone git@github.com:you/your-repo.git
+wtree init                       # or from inside an existing checkout: convert it in place
 cd your-repo
 wtree add feature/x              # new worktree, new branch
 wtree add hotfix/y origin/main   # new worktree, branched from origin/main

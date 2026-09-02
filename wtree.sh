@@ -7,6 +7,7 @@
 #
 # Usage:
 #   wtree clone <repo-url> [dir-name]   Clone a repo as a worktree-ready project
+#   wtree init [dir-name]               Convert the repo you're standing in into a wtree project
 #   wtree add <branch> [start-point]    Add a worktree for <branch>
 #   wtree rm <branch>                   Remove a worktree
 #   wtree list                          List worktrees in this project
@@ -72,6 +73,7 @@ usage() {
 wtree - bare-clone git worktrees, without the ceremony
 
   wtree clone <repo-url> [dir-name]   Set up a new worktree-ready project
+  wtree init [dir-name]               Convert the repo you're standing in into a wtree project
   wtree add <branch> [start-point]    Add a worktree for <branch>
   wtree rm <branch>                   Remove a worktree
   wtree list                          List worktrees in this project
@@ -262,7 +264,6 @@ $dirty"
 	fi
 
 	local origin_url
-	# shellcheck disable=SC2034 # consumed by the Task 3 happy path
 	origin_url=$(git -C "$src" remote get-url origin 2>/dev/null) || die "no 'origin' remote configured — wtree init requires one"
 
 	local branch
@@ -275,9 +276,25 @@ $dirty"
 
 	[[ -e "$target_path" ]] && die "'$target' already exists"
 
-	# TODO(Task 3): mkdir/cd into $target_path, bare_clone_into "$src",
-	# fix up origin, fetch, worktree add "$branch", upstream tracking,
-	# success messages.
+	mkdir "$target_path"
+	cd "$target_path"
+
+	bare_clone_into "$src"
+	git -C .bare remote set-url origin "$origin_url"
+
+	info "fetching all branches"
+	git fetch origin --quiet
+
+	info "creating worktree for '$branch'"
+	git worktree add "$branch" "$branch"
+
+	if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+		git branch --set-upstream-to="origin/$branch" "$branch" >/dev/null
+	fi
+
+	ok "project ready at $(pwd)"
+	whoami_here "$(pwd)/$branch"
+	info "original directory left untouched — remove it yourself once you've verified the new project: rm -rf $src"
 }
 
 cmd_rm() {

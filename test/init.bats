@@ -90,3 +90,79 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"already exists"* ]]
 }
+
+@test "init creates <repo>-wtree by default with a worktree for the checked-out (non-default) branch" {
+  wtree_setup_plain_repo
+  git -C "$REPO_DIR" checkout -q -b feature/x
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  [ -d "$target/.bare" ]
+  [ -d "$target/feature/x" ]
+  run git -C "$target/feature/x" rev-parse --abbrev-ref HEAD
+  [ "$output" = "feature/x" ]
+}
+
+@test "init accepts an explicit name argument, overriding the default" {
+  wtree_setup_plain_repo
+
+  run "$WTREE_BIN" init custom-name
+  [ "$status" -eq 0 ]
+  [ -d "$(dirname "$REPO_DIR")/custom-name/main" ]
+}
+
+@test "init sets the new bare clone's origin to the source's real remote URL" {
+  wtree_setup_plain_repo
+  local expected_origin
+  expected_origin="$(git -C "$REPO_DIR" remote get-url origin)"
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  run git -C "$target/.bare" remote get-url origin
+  [ "$output" = "$expected_origin" ]
+}
+
+@test "init sets upstream tracking when a matching origin branch exists" {
+  wtree_setup_plain_repo
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  run git -C "$target/main" rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$output" = "origin/main" ]
+}
+
+@test "init leaves the branch untracked when there is no matching origin branch" {
+  wtree_setup_plain_repo
+  git -C "$REPO_DIR" checkout -q -b local-only
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  run git -C "$target/local-only" rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$status" -ne 0 ]
+}
+
+@test "the source directory is unchanged after init runs" {
+  wtree_setup_plain_repo
+  local before_head
+  before_head="$(git -C "$REPO_DIR" rev-parse HEAD)"
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+
+  [ -d "$REPO_DIR/.git" ]
+  [ ! -d "$REPO_DIR/.bare" ]
+  run git -C "$REPO_DIR" rev-parse --is-bare-repository
+  [ "$output" = "false" ]
+  run git -C "$REPO_DIR" rev-parse HEAD
+  [ "$output" = "$before_head" ]
+  run git -C "$REPO_DIR" status --porcelain
+  [ -z "$output" ]
+}
