@@ -7,6 +7,10 @@
 
 `wtree` sets up a repo using the bare-clone + worktrees pattern so each branch gets its own real directory instead of stashing/switching in place.
 
+<p align="center">
+  <img src="demo.gif" alt="wtree demo" width="700">
+</p>
+
 ## Install
 
 ### Homebrew (macOS)
