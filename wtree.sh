@@ -241,15 +241,16 @@ cmd_init() {
 	local name="${1:-}"
 
 	git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
-	[[ "$(git rev-parse --is-bare-repository)" == "true" ]] && die "already a bare repository"
-
-	local src
-	src=$(git rev-parse --show-toplevel)
 
 	local existing_root
 	if existing_root=$(find_project_root); then
 		die "already a wtree project (found .bare at $existing_root)"
 	fi
+
+	[[ "$(git rev-parse --is-bare-repository)" == "true" ]] && die "already a bare repository"
+
+	local src
+	src=$(git rev-parse --show-toplevel)
 
 	git -C "$src" symbolic-ref -q HEAD >/dev/null || die "HEAD is detached — check out a branch before running wtree init"
 

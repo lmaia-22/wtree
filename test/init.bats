@@ -105,6 +105,18 @@ setup() {
   [ "$output" = "feature/x" ]
 }
 
+@test "init works from a subdirectory of the existing repo, not just its root" {
+  wtree_setup_plain_repo
+  mkdir -p "$REPO_DIR/sub/deeper"
+  cd "$REPO_DIR/sub/deeper"
+
+  run "$WTREE_BIN" init
+  [ "$status" -eq 0 ]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  [ -d "$target/main" ]
+}
+
 @test "init accepts an explicit name argument, overriding the default" {
   wtree_setup_plain_repo
 
@@ -145,6 +157,7 @@ setup() {
   [ "$status" -eq 0 ]
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  [ -d "$target/local-only" ]
   run git -C "$target/local-only" rev-parse --abbrev-ref --symbolic-full-name @{u}
   [ "$status" -ne 0 ]
 }

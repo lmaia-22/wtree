@@ -60,7 +60,6 @@ and `wtree ship`.
 ```bash
 cd ~/Developer/some-folder
 wtree clone git@github.com:you/your-repo.git
-wtree init                       # or from inside an existing checkout: convert it in place
 cd your-repo
 wtree add feature/x              # new worktree, new branch
 wtree add hotfix/y origin/main   # new worktree, branched from origin/main
@@ -78,11 +77,16 @@ wtree pr                         # push and open a PR for this branch
 wtree ship                       # merge the PR and clean up (with confirmation)
 ```
 
+Already have the repo checked out locally? `cd` into it and run
+`wtree init` instead of `clone` — it creates a new sibling
+`<repo>-wtree` project from your existing checkout (leaving the
+original directory untouched) rather than cloning fresh from a URL.
+
 Run `add`, `rm`, `status`, `switch`, `clean`, and `list` from anywhere
-inside a project created with `wtree clone` — they walk up to find the
-project root automatically. `pr` and `ship` instead operate on whatever
-branch is checked out where you run them, so run those from inside the
-specific worktree.
+inside a project created with `wtree clone` or `wtree init` — they walk
+up to find the project root automatically. `pr` and `ship` instead
+operate on whatever branch is checked out where you run them, so run
+those from inside the specific worktree.
 
 ## Hooks
 
