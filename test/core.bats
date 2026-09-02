@@ -78,7 +78,20 @@ setup() {
   run "$WTREE_BIN" rm feature/x
   [ "$status" -eq 0 ]
   [ ! -d "$PROJECT_ROOT/feature/x" ]
-  [ ! -d "$PROJECT_ROOT/.bare/worktrees/feature/x" ]
+  run git worktree list --porcelain
+  [[ "$output" != *"feature/x"* ]]
+}
+
+@test "rm prunes stale worktree admin entries" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/a >/dev/null
+  "$WTREE_BIN" add feature/b >/dev/null
+  rm -rf "$PROJECT_ROOT/feature/b"   # simulate stale entry, bypassing wtree rm
+
+  run "$WTREE_BIN" rm feature/a
+  [ "$status" -eq 0 ]
+  run git worktree list --porcelain
+  [[ "$output" != *"feature/b"* ]]
 }
 
 @test "add works from a subdirectory of the project, not just the root" {
