@@ -199,7 +199,31 @@ cmd_add() {
 	fi
 
 	ok "worktree ready: $root/$branch"
+	run_add_hook "$root" "$branch"
 	whoami_here "$root/$branch"
+}
+
+# Runs $root/.wtree-hook (if present) with the new worktree as cwd and
+# the branch name as $1. Never at project root nor under any worktree,
+# so it's local-only by construction — nothing here is git-tracked.
+run_add_hook() {
+	local root="$1" branch="$2"
+	local hook="$root/.wtree-hook"
+
+	[[ -e "$hook" ]] || return 0
+
+	if [[ ! -x "$hook" ]]; then
+		warn ".wtree-hook exists but is not executable — skipping (chmod +x to enable)"
+		return 0
+	fi
+
+	local rc=0
+	(cd "$root/$branch" && "$hook" "$branch") || rc=$?
+	if [[ $rc -eq 0 ]]; then
+		ok "hook completed"
+	else
+		warn ".wtree-hook exited $rc — worktree created, but setup may be incomplete"
+	fi
 }
 
 cmd_rm() {

@@ -83,6 +83,25 @@ project root automatically. `pr` and `ship` instead operate on whatever
 branch is checked out where you run them, so run those from inside the
 specific worktree.
 
+## Hooks
+
+New worktrees start empty — no `.env`, no `node_modules`, no local
+config. To fix that, drop an executable `.wtree-hook` script at the
+project root (next to `.bare`):
+
+```bash
+#!/usr/bin/env bash
+# $1 is the branch name; cwd is already the new worktree.
+cp ../main/.env .
+npm install
+```
+
+`wtree add` runs it automatically, with the new worktree as the working
+directory. It only lives at the project root, never inside any
+worktree, so it's local-only by construction — nothing commits it,
+nothing a cloned repo can plant on you. A failing hook prints a warning
+but never removes the worktree it just created.
+
 ## Why
 
 Plain `git worktree` works, but juggling worktree paths by hand gets
