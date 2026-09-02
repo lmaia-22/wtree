@@ -41,14 +41,20 @@ die()  { echo "${RED}x${RESET} $*" >&2; exit 1; }
 info() { echo "${BLUE}->${RESET} $*"; }
 ok()   { echo "${GREEN}v${RESET} $*"; }
 
-usage() {
-  cat <<USAGE
+banner() {
+  cat <<BANNER
    ${TEAL1}⢀⣠⣴⣶⣶⣦⣄⡀${RESET}
  ${TEAL2}⢀⣴⣿⣿⣿⣿⣿⣿⣿⣦⡀${RESET}     ${WHITE}wtree${RESET} ${GRAY}v${VERSION}${RESET}
 ${TEAL3}⢠⣿⣿⣿${APPLE}⣿${TEAL3}⣿⣿${APPLE}⣿${TEAL3}⣿⣿⡄${RESET}    ${GRAY}bare-clone git worktrees${RESET}
  ${TEAL4}⠙⠻⢿⣿⣿⣿⣿⠿⠟⠋${RESET}     ${TEAL3}without the ceremony${RESET}
       ${TRUNK1}║${RESET}
       ${TRUNK2}╩${RESET}
+BANNER
+}
+
+usage() {
+  banner
+  cat <<USAGE
 
 wtree - bare-clone git worktrees, without the ceremony
 
@@ -61,7 +67,7 @@ wtree - bare-clone git worktrees, without the ceremony
   wtree clean                         Remove broken and already-merged worktrees (with confirmation)
   wtree pr                            Push and open a PR for the current worktree's branch
   wtree ship                          Merge the current branch's PR and clean up (with confirmation)
-  wtree --version                     Print the wtree version
+  wtree --version                     Print the wtree banner and version
 
 Examples:
   cd ~/Developer/company
@@ -435,7 +441,7 @@ case "${1:-}" in
   clean)        shift; cmd_clean "$@" ;;
   pr)           shift; cmd_pr "$@" ;;
   ship)         shift; cmd_ship "$@" ;;
-  -v|--version|version) echo "wtree $VERSION" ;;
+  -v|--version|version) banner ;;
   -h|--help|"") usage ;;
   *)            die "unknown command '$1' (see wtree --help)" ;;
 esac
