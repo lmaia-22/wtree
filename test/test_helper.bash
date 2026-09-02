@@ -73,6 +73,11 @@ wtree_drop_fzf_from_path() {
   PATH="$newpath"
 }
 
+# Strips ANSI color codes so assertions don't have to embed escape sequences.
+strip_color() {
+  sed -E $'s/\x1b\\[[0-9;]*m//g' <<<"$1"
+}
+
 # Creates a throwaway bare "origin" repo with one commit on $1 (default
 # "main"), plus a normal (non-bare, non-wtree) clone of it at
 # $BATS_TEST_TMPDIR/repo — this is the "existing repo" `wtree init`

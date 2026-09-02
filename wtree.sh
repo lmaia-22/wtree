@@ -473,12 +473,60 @@ cmd_clean() {
 	fi
 }
 
+# Determines "owner/repo" for the current project's origin remote,
+# independent of URL style (scp-like SSH, ssh://, or https).
+repo_owner_slug() {
+	local url
+	url=$(git remote get-url origin) || return 1
+	url="${url%.git}"
+	if [[ "$url" == *"://"* ]]; then
+		url="${url#*://}"
+		url="${url#*/}"
+	else
+		url="${url#*:}"
+	fi
+	echo "$url"
+}
+
+# Picks whichever logged-in gh account can actually see the current
+# repo and exports GH_TOKEN for it, scoped to this process only - never
+# touches gh's global "active account" (gh auth switch changes that for
+# every terminal). Falls back to gh's own active account (no override)
+# whenever detection is inconclusive, so this is purely additive over
+# gh's default behavior, never a new failure mode.
+resolve_gh_account() {
+	local slug
+	slug=$(repo_owner_slug) || return 0
+
+	local accounts
+	accounts=$(gh auth status --hostname github.com --json hosts --jq \
+		'.hosts["github.com"][] | "\(.active) \(.login)"' 2>/dev/null) || return 0
+	[[ -n "$accounts" ]] || return 0
+
+	local line login token
+	while IFS= read -r line; do
+		login="${line#* }"
+		[[ -n "$login" ]] || continue
+		token=$(gh auth token --hostname github.com --user "$login" 2>/dev/null) || continue
+		if GH_TOKEN="$token" gh api "repos/$slug" >/dev/null 2>&1; then
+			GH_TOKEN="$token"
+			export GH_TOKEN
+			# stderr, not stdout: cmd_ship's stdout must stay exactly the
+			# landing path for the shell wrapper's `cd "$(command wtree
+			# ship)"` to work.
+			echo "${YELLOW}identity(gh):${RESET} $login" >&2
+			return 0
+		fi
+	done < <(sort -r <<<"$accounts")
+}
+
 cmd_pr() {
 	local root
 	root=$(find_project_root) || die "not inside a wtree project (no .bare found)"
 	root=$(cd "$root" && pwd -P)
 
 	command -v gh >/dev/null || die "gh not found — install it (brew install gh) to use wtree pr"
+	resolve_gh_account
 
 	local branch
 	branch=$(current_worktree_branch "$root")
@@ -506,6 +554,7 @@ cmd_ship() {
 	root=$(cd "$root" && pwd -P)
 
 	command -v gh >/dev/null || die "gh not found — install it (brew install gh) to use wtree ship"
+	resolve_gh_account
 
 	local branch
 	branch=$(current_worktree_branch "$root")

@@ -8,6 +8,32 @@
 set -euo pipefail
 
 case "${1:-} ${2:-}" in
+"auth status")
+  # wtree.sh's resolve_gh_account calls:
+  #   gh auth status --hostname github.com --json hosts --jq '...'
+  # The real --jq filter is ignored here; tests set GH_MOCK_AUTH_ACCOUNTS
+  # directly to the lines that filter would have produced: one
+  # "<active> <login>" pair per logged-in account, e.g.
+  #   $'true personal-account\nfalse work-account'
+  printf '%s\n' "${GH_MOCK_AUTH_ACCOUNTS:-true default-account}"
+  ;;
+"auth token")
+  shift 2
+  user=""
+  prev=""
+  for arg in "$@"; do
+    [[ "$prev" == "--user" ]] && user="$arg"
+    prev="$arg"
+  done
+  echo "token-for-$user"
+  ;;
+"api repos/"*)
+  # wtree.sh probes each account's token against `gh api repos/<slug>`
+  # to find one that can see the repo. GH_MOCK_API_ALLOWED_TOKEN names
+  # the one token (from the "auth token" mock above) that should
+  # succeed; every other token is treated as lacking access.
+  [[ "${GH_TOKEN:-}" == "${GH_MOCK_API_ALLOWED_TOKEN:-}" ]]
+  ;;
 "pr view")
   shift 2
   [[ "${GH_MOCK_PR_VIEW_FAIL:-0}" == "1" ]] && exit 1

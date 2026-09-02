@@ -2,11 +2,6 @@ setup() {
   load test_helper
 }
 
-# Strips ANSI color codes so assertions don't have to embed escape sequences.
-strip_color() {
-  sed -E $'s/\x1b\\[[0-9;]*m//g' <<<"$1"
-}
-
 @test "status prints a header and one row per non-bare worktree" {
   wtree_setup_project
   "$WTREE_BIN" add feature/x >/dev/null

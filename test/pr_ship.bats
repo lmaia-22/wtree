@@ -96,6 +96,34 @@ setup() {
   [ "$output" = "origin/hotfix/y" ]
 }
 
+@test "pr uses whichever logged-in gh account can see the repo, not necessarily the active one" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  cd feature/x
+  wtree_install_gh_mock
+  export GH_MOCK_AUTH_ACCOUNTS=$'true personal-account\nfalse work-account'
+  export GH_MOCK_API_ALLOWED_TOKEN="token-for-work-account"
+  export GH_MOCK_PR_URL="https://example.invalid/pr/9"
+
+  run "$WTREE_BIN" pr
+  [ "$status" -eq 0 ]
+  [[ "$(strip_color "$output")" == *"identity(gh): work-account"* ]]
+  [[ "$output" == *"pr/9"* ]]
+}
+
+@test "pr does not print identity(gh) or override anything when no logged-in account can see the repo" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  cd feature/x
+  wtree_install_gh_mock
+  export GH_MOCK_AUTH_ACCOUNTS=$'true personal-account\nfalse work-account'
+  # No GH_MOCK_API_ALLOWED_TOKEN set - neither account can see the repo.
+
+  run "$WTREE_BIN" pr
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"identity(gh)"* ]]
+}
+
 # ── ship, with mocked gh ──
 
 @test "ship dies with a clear message when gh pr view finds no PR" {
@@ -156,6 +184,25 @@ setup() {
   run --separate-stderr "$WTREE_BIN" ship <<<"y"
   [ "$status" -eq 0 ]
   [ "$output" = "$PROJECT_ROOT/main" ]
+}
+
+@test "ship's stdout stays exactly the landing path even when resolve_gh_account finds a match" {
+  # Regression guard: resolve_gh_account's "identity(gh): ..." message
+  # must go to stderr, not stdout - cmd_ship's stdout is the return
+  # value the shell wrapper cd's into (`cd "$(command wtree ship)"`),
+  # so anything else printed to stdout here would corrupt it.
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  cd feature/x
+  wtree_install_gh_mock
+  export GH_MOCK_MERGED_AT="2026-01-01T00:00:00Z"
+  export GH_MOCK_AUTH_ACCOUNTS=$'true personal-account\nfalse work-account'
+  export GH_MOCK_API_ALLOWED_TOKEN="token-for-work-account"
+
+  run --separate-stderr "$WTREE_BIN" ship <<<"y"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$PROJECT_ROOT/main" ]
+  [[ "$(strip_color "$stderr")" == *"identity(gh): work-account"* ]]
 }
 
 @test "declining ship's confirmation leaves the worktree and PR untouched" {
