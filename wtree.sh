@@ -130,6 +130,19 @@ current_worktree_branch() {
 	git rev-parse --abbrev-ref HEAD
 }
 
+# Bare-clones <source> into ./.bare (must be run with cwd already inside
+# the target directory), writes the .git pointer file, and sets the
+# standard fetch refspec. Does not fetch or create any worktree —
+# callers do that afterward, since clone and init disagree on which
+# branch gets the first worktree.
+bare_clone_into() {
+	local source="$1"
+	info "bare-cloning $source into .bare"
+	git clone --bare "$source" .bare
+	echo "gitdir: ./.bare" >.git
+	git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+}
+
 cmd_clone() {
 	local url="${1:?repo url required}"
 	local name="${2:-}"
@@ -152,11 +165,7 @@ cmd_clone() {
 	mkdir "$name"
 	cd "$name"
 
-	info "bare-cloning $url into .bare"
-	git clone --bare "$url" .bare
-
-	echo "gitdir: ./.bare" >.git
-	git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+	bare_clone_into "$url"
 
 	info "fetching all branches"
 	git fetch origin --quiet
