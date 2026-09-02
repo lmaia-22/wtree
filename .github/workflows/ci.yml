@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n wtree.sh
+      # shell/wtree.zsh isn't linted here - shellcheck doesn't parse zsh syntax.
+      - run: shellcheck wtree.sh shell/wtree.bash
