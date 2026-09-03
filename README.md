@@ -107,6 +107,18 @@ worktree, so it's local-only by construction — nothing commits it,
 nothing a cloned repo can plant on you. A failing hook prints a warning
 but never removes the worktree it just created.
 
+`.wtree-hook` has no file extension, so most editors show it as a
+generic file with no syntax highlighting. In VS Code, add this to your
+[user settings](https://code.visualstudio.com/docs/getstarted/settings)
+(applies to every project, not just one) to get shell syntax
+highlighting and a shell-script icon instead:
+
+```json
+"files.associations": {
+  ".wtree-hook": "shellscript"
+}
+```
+
 ## Why
 
 Plain `git worktree` works, but juggling worktree paths by hand gets
