@@ -81,6 +81,47 @@ setup() {
   [[ "$output" == *"already exists"* ]]
 }
 
+@test "add refuses a nested branch name blocked by a shorter existing branch" {
+  # Regression test: git stores branches like directory paths under
+  # refs/heads/, so 'feature/p' and 'feature/p/1/23' can never coexist
+  # - git's own raw error ("cannot lock ref ... exists") is confusing,
+  # so wtree catches this before attempting the git operation.
+  #
+  # Assertions are chained with && into one final statement rather than
+  # left as separate bare lines: a bats test body runs in a context
+  # where its own exit status is being tested by the harness, which
+  # (per bash's set -e semantics for functions called in a tested
+  # context) strips errexit from everything inside it - an earlier
+  # failing bare assertion would NOT stop the test or fail it if a
+  # later line happens to independently pass. Verified this empirically
+  # before relying on it.
+  wtree_setup_project
+  "$WTREE_BIN" add feature/p >/dev/null
+
+  run "$WTREE_BIN" add feature/p/1/23
+  [ "$status" -ne 0 ] &&
+    [[ "$output" == *"'feature/p' already exists and blocks it"* ]] &&
+    [ ! -d "$PROJECT_ROOT/feature/p/1" ]
+}
+
+@test "add refuses a short branch name blocked by a longer existing branch" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/p/1 >/dev/null
+
+  run "$WTREE_BIN" add feature/p
+  [ "$status" -ne 0 ] &&
+    [[ "$output" == *"'feature/p/1' already exists and blocks it"* ]]
+}
+
+@test "add still allows sibling branches under the same prefix" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+
+  run "$WTREE_BIN" add feature/y
+  [ "$status" -eq 0 ]
+  [ -d "$PROJECT_ROOT/feature/y" ]
+}
+
 @test "rm removes a worktree and prunes" {
   wtree_setup_project
   "$WTREE_BIN" add feature/x >/dev/null

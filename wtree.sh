@@ -212,6 +212,25 @@ cmd_clone() {
 	echo "  cd $name/$default_branch"
 }
 
+# Refuses to create $branch if its ref path would collide with an
+# existing local branch - git stores branches like directory paths
+# under refs/heads/, so a branch can't be both a leaf and a parent
+# (e.g. 'feature/p' and 'feature/p/1/23' can never coexist, in either
+# direction). Without this, git's own raw "cannot lock ref ... exists"
+# error is the only signal, which doesn't explain what's actually wrong.
+check_branch_path_collision() {
+	local branch="$1"
+	local existing
+	while IFS= read -r existing; do
+		[[ -z "$existing" || "$existing" == "$branch" ]] && continue
+		if [[ "$branch" == "$existing"/* || "$existing" == "$branch"/* ]]; then
+			die "can't create '$branch' — branch '$existing' already exists and blocks it
+  (git stores branches like directory paths: a branch can't be both a leaf and a parent)"
+		fi
+	done < <(git for-each-ref --format='%(refname:short)' refs/heads)
+	return 0
+}
+
 cmd_add() {
 	local branch="${1:?branch name required}"
 	local start="${2:-}"
@@ -228,12 +247,15 @@ cmd_add() {
 
 	if git show-ref --verify --quiet "refs/heads/$branch"; then
 		git worktree add "$branch" "$branch"
-	elif [[ -n "$start" ]]; then
-		git worktree add -b "$branch" "$branch" "$start"
-	elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-		git worktree add -b "$branch" "$branch" "origin/$branch"
 	else
-		git worktree add -b "$branch" "$branch"
+		check_branch_path_collision "$branch"
+		if [[ -n "$start" ]]; then
+			git worktree add -b "$branch" "$branch" "$start"
+		elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+			git worktree add -b "$branch" "$branch" "origin/$branch"
+		else
+			git worktree add -b "$branch" "$branch"
+		fi
 	fi
 
 	ok "worktree ready: $root/$branch"
