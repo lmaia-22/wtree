@@ -40,7 +40,7 @@ _wtree_branches() {
 
 _wtree() {
   local -a subcmds
-  subcmds=(clone add rm status switch list clean pr ship)
+  subcmds=(clone init add rm status switch list clean pr ship doctor)
 
   if (( CURRENT == 2 )); then
     compadd -a subcmds

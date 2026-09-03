@@ -31,6 +31,16 @@ setup() {
   [[ "$output" == *"already exists"* ]]
 }
 
+@test "clone refuses a name argument containing a path separator" {
+  cd "$BATS_TEST_TMPDIR"
+  mkdir origin.git
+  git -C origin.git init -q --bare --initial-branch=main
+
+  run "$WTREE_BIN" clone "$BATS_TEST_TMPDIR/origin.git" nested/dir
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"plain directory name"* ]]
+}
+
 @test "add creates a new branch and worktree when neither exists" {
   wtree_setup_project
 

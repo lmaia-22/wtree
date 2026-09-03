@@ -52,7 +52,7 @@ _wtree_complete() {
 	local cur
 	cur="${COMP_WORDS[COMP_CWORD]}"
 	if [[ $COMP_CWORD -eq 1 ]]; then
-		_wtree_compreply_from "clone add rm status switch list clean pr ship" "$cur"
+		_wtree_compreply_from "clone init add rm status switch list clean pr ship doctor" "$cur"
 		return
 	fi
 	case "${COMP_WORDS[1]}" in

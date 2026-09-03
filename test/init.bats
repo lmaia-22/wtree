@@ -179,3 +179,37 @@ setup() {
   run git -C "$REPO_DIR" status --porcelain
   [ -z "$output" ]
 }
+
+@test "init refuses a name argument containing a path separator" {
+  wtree_setup_plain_repo
+
+  run "$WTREE_BIN" init nested/dir
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"plain directory name"* ]]
+}
+
+@test "init refuses when the source repo has no commits yet" {
+  export HOME="$BATS_TEST_TMPDIR/home"
+  mkdir -p "$HOME"
+  cd "$BATS_TEST_TMPDIR"
+  mkdir origin.git
+  git -C origin.git init -q --bare --initial-branch=main
+  git clone -q origin.git repo
+  cd repo
+
+  run "$WTREE_BIN" init
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"no commits"* ]]
+}
+
+@test "init cleans up the half-built target and dies clearly when fetch fails" {
+  wtree_setup_plain_repo
+  rm -rf "$ORIGIN_DIR"
+
+  run "$WTREE_BIN" init
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"fetch failed"* ]]
+  local target
+  target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
+  [ ! -e "$target" ]
+}

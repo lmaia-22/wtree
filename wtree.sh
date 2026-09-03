@@ -145,6 +145,34 @@ bare_clone_into() {
 	git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 }
 
+# Refuses to let a name argument escape its intended sibling directory
+# via a path separator - shared by clone and init's [name] argument.
+# Must be an if/fi (not `[[ cond ]] && die`): as the last statement of
+# a function called as a bare statement, a false && chain would leak
+# its own non-zero exit status and silently kill the script under
+# `set -e`, even though nothing actually failed.
+require_plain_name() {
+	if [[ "$1" == */* ]]; then
+		die "name must be a plain directory name, not a path"
+	fi
+}
+
+# Runs `git fetch origin --quiet` with cwd already inside the
+# just-created target directory; on failure, removes that directory so
+# a retry isn't blocked by a stale, incomplete project - the fetch is
+# the first step in clone/init that can fail after mkdir due to
+# something outside our control (network, permissions on the remote).
+fetch_or_cleanup() {
+	info "fetching all branches"
+	if ! git fetch origin --quiet; then
+		local target_path
+		target_path=$(pwd)
+		cd "$(dirname "$target_path")"
+		rm -rf "$target_path"
+		die "fetch failed — removed incomplete $(basename "$target_path")"
+	fi
+}
+
 cmd_clone() {
 	local url="${1:?repo url required}"
 	local name="${2:-}"
@@ -154,6 +182,7 @@ cmd_clone() {
 		name="${name##*/}"
 		name="${name%.git}"
 	fi
+	require_plain_name "$name"
 
 	[[ -e "$name" ]] && die "'$name' already exists here"
 
@@ -168,9 +197,7 @@ cmd_clone() {
 	cd "$name"
 
 	bare_clone_into "$url"
-
-	info "fetching all branches"
-	git fetch origin --quiet
+	fetch_or_cleanup
 
 	info "creating worktree for '$default_branch'"
 	git worktree add "$default_branch"
@@ -253,6 +280,7 @@ cmd_init() {
 	src=$(git rev-parse --show-toplevel)
 
 	git -C "$src" symbolic-ref -q HEAD >/dev/null || die "HEAD is detached — check out a branch before running wtree init"
+	git -C "$src" rev-parse --verify -q HEAD >/dev/null || die "source repo has no commits yet"
 
 	local dirty
 	dirty=$(git -C "$src" status --porcelain)
@@ -272,6 +300,7 @@ $dirty"
 
 	local target="$name"
 	[[ -z "$target" ]] && target="$(basename "$src")-wtree"
+	require_plain_name "$target"
 	local target_path
 	target_path="$(dirname "$src")/$target"
 
@@ -282,9 +311,7 @@ $dirty"
 
 	bare_clone_into "$src"
 	git -C .bare remote set-url origin "$origin_url"
-
-	info "fetching all branches"
-	git fetch origin --quiet
+	fetch_or_cleanup
 
 	info "creating worktree for '$branch'"
 	git worktree add "$branch" "$branch"
