@@ -4,8 +4,8 @@ setup() {
 
 @test "clone creates .bare and a worktree for the default branch" {
   wtree_setup_project main
-  [ -d "$PROJECT_ROOT/.bare" ]
-  [ -d "$PROJECT_ROOT/main" ]
+  [ -d "$PROJECT_ROOT/.bare" ] || return 1
+  [ -d "$PROJECT_ROOT/main" ] || return 1
   [ -f "$PROJECT_ROOT/.git" ]
 }
 
@@ -16,7 +16,7 @@ setup() {
   # No commits at all — ls-remote --symref returns nothing.
 
   run "$WTREE_BIN" clone "$BATS_TEST_TMPDIR/origin.git" proj
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ -d "proj/main" ]
 }
 
@@ -27,7 +27,7 @@ setup() {
   mkdir proj
 
   run "$WTREE_BIN" clone "$BATS_TEST_TMPDIR/origin.git" proj
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"already exists"* ]]
 }
 
@@ -37,7 +37,7 @@ setup() {
   git -C origin.git init -q --bare --initial-branch=main
 
   run "$WTREE_BIN" clone "$BATS_TEST_TMPDIR/origin.git" nested/dir
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"plain directory name"* ]]
 }
 
@@ -45,8 +45,8 @@ setup() {
   wtree_setup_project
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
-  [ -d "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ -d "$PROJECT_ROOT/feature/x" ] || return 1
   git -C "$PROJECT_ROOT/.bare" show-ref --verify --quiet refs/heads/feature/x
 }
 
@@ -55,7 +55,7 @@ setup() {
   git -C .bare branch feature/existing
 
   run "$WTREE_BIN" add feature/existing
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ -d "$PROJECT_ROOT/feature/existing" ]
 }
 
@@ -67,7 +67,7 @@ setup() {
   git -C .bare fetch origin --quiet
 
   run "$WTREE_BIN" add feature/remote-only
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   run git -C "$PROJECT_ROOT/feature/remote-only" rev-parse --abbrev-ref --symbolic-full-name @{u}
   [ "$output" = "origin/feature/remote-only" ]
 }
@@ -77,7 +77,7 @@ setup() {
   "$WTREE_BIN" add feature/x >/dev/null
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"already exists"* ]]
 }
 
@@ -87,21 +87,24 @@ setup() {
   # - git's own raw error ("cannot lock ref ... exists") is confusing,
   # so wtree catches this before attempting the git operation.
   #
-  # Assertions are chained with && into one final statement rather than
-  # left as separate bare lines: a bats test body runs in a context
-  # where its own exit status is being tested by the harness, which
-  # (per bash's set -e semantics for functions called in a tested
-  # context) strips errexit from everything inside it - an earlier
-  # failing bare assertion would NOT stop the test or fail it if a
-  # later line happens to independently pass. Verified this empirically
-  # before relying on it.
+  # Every non-final assertion below ends in `|| return 1`: a bats test
+  # body runs in a context where its own exit status is being tested
+  # by the harness, which (per bash's set -e semantics for functions
+  # called in a tested context) strips errexit from everything inside
+  # it - a bare failing assertion does NOT stop or fail the test if any
+  # later command (another assertion, another `run`, anything) happens
+  # to exit 0 afterward. Only the test's literal last statement, or an
+  # explicit `return`/`exit`, reliably determines pass/fail. Verified
+  # this empirically (including inside the fix this test guards)
+  # before adopting it as the house style for every test with more
+  # than one assertion.
   wtree_setup_project
   "$WTREE_BIN" add feature/p >/dev/null
 
   run "$WTREE_BIN" add feature/p/1/23
-  [ "$status" -ne 0 ] &&
-    [[ "$output" == *"'feature/p' already exists and blocks it"* ]] &&
-    [ ! -d "$PROJECT_ROOT/feature/p/1" ]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$output" == *"'feature/p' already exists and blocks it"* ]] || return 1
+  [ ! -d "$PROJECT_ROOT/feature/p/1" ]
 }
 
 @test "add refuses a short branch name blocked by a longer existing branch" {
@@ -109,8 +112,8 @@ setup() {
   "$WTREE_BIN" add feature/p/1 >/dev/null
 
   run "$WTREE_BIN" add feature/p
-  [ "$status" -ne 0 ] &&
-    [[ "$output" == *"'feature/p/1' already exists and blocks it"* ]]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$output" == *"'feature/p/1' already exists and blocks it"* ]]
 }
 
 @test "add still allows sibling branches under the same prefix" {
@@ -118,7 +121,7 @@ setup() {
   "$WTREE_BIN" add feature/x >/dev/null
 
   run "$WTREE_BIN" add feature/y
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ -d "$PROJECT_ROOT/feature/y" ]
 }
 
@@ -127,8 +130,8 @@ setup() {
   "$WTREE_BIN" add feature/x >/dev/null
 
   run "$WTREE_BIN" rm feature/x
-  [ "$status" -eq 0 ]
-  [ ! -d "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ ! -d "$PROJECT_ROOT/feature/x" ] || return 1
   run git worktree list --porcelain
   [[ "$output" != *"feature/x"* ]]
 }
@@ -140,7 +143,7 @@ setup() {
   rm -rf "$PROJECT_ROOT/feature/b"   # simulate stale entry, bypassing wtree rm
 
   run "$WTREE_BIN" rm feature/a
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   run git worktree list --porcelain
   [[ "$output" != *"feature/b"* ]]
 }
@@ -150,7 +153,7 @@ setup() {
   cd main
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ -d "$PROJECT_ROOT/feature/x" ]
 }
 
@@ -160,7 +163,7 @@ setup() {
   cd feature/x
 
   run "$WTREE_BIN" list
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"main"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"main"* ]] || return 1
   [[ "$output" == *"feature/x"* ]]
 }

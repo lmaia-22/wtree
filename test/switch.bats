@@ -7,8 +7,8 @@ setup() {
   "$WTREE_BIN" add feature/x >/dev/null
 
   run --separate-stderr "$WTREE_BIN" switch feature/x
-  [ "$status" -eq 0 ]
-  [ "$output" = "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ "$output" = "$PROJECT_ROOT/feature/x" ] || return 1
   [ -z "$stderr" ]
 }
 
@@ -16,8 +16,8 @@ setup() {
   wtree_setup_project
 
   run --separate-stderr "$WTREE_BIN" switch does-not-exist
-  [ "$status" -ne 0 ]
-  [ -z "$output" ]
+  [ "$status" -ne 0 ] || return 1
+  [ -z "$output" ] || return 1
   [[ "$stderr" == *"no worktree for branch"* ]]
 }
 
@@ -26,7 +26,7 @@ setup() {
   wtree_drop_fzf_from_path
 
   run --separate-stderr "$WTREE_BIN" switch
-  [ "$status" -ne 0 ]
-  [ -z "$output" ]
+  [ "$status" -ne 0 ] || return 1
+  [ -z "$output" ] || return 1
   [[ "$stderr" == *"fzf not found"* ]]
 }

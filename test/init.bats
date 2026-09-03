@@ -8,7 +8,7 @@ setup() {
   cd plain
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"not inside a git repo"* ]]
 }
 
@@ -19,7 +19,7 @@ setup() {
   cd bare.git
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"already a bare repository"* ]]
 }
 
@@ -28,7 +28,7 @@ setup() {
   cd main
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"already a wtree project"* ]]
 }
 
@@ -37,7 +37,7 @@ setup() {
   git -C "$REPO_DIR" checkout -q --detach
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"detached"* ]]
 }
 
@@ -49,7 +49,7 @@ setup() {
   echo more >>"$REPO_DIR/tracked.txt"
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"dirty"* ]]
 }
 
@@ -58,7 +58,7 @@ setup() {
   touch "$REPO_DIR/untracked.txt"
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"dirty"* ]]
 }
 
@@ -69,7 +69,7 @@ setup() {
   git -c user.name=test -c user.email=test@test.invalid -C "$REPO_DIR" stash
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"stash"* ]]
 }
 
@@ -78,7 +78,7 @@ setup() {
   git -C "$REPO_DIR" remote remove origin
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"no 'origin' remote"* ]]
 }
 
@@ -87,7 +87,7 @@ setup() {
   mkdir "$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"already exists"* ]]
 }
 
@@ -96,11 +96,11 @@ setup() {
   git -C "$REPO_DIR" checkout -q -b feature/x
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
-  [ -d "$target/.bare" ]
-  [ -d "$target/feature/x" ]
+  [ -d "$target/.bare" ] || return 1
+  [ -d "$target/feature/x" ] || return 1
   run git -C "$target/feature/x" rev-parse --abbrev-ref HEAD
   [ "$output" = "feature/x" ]
 }
@@ -111,7 +111,7 @@ setup() {
   cd "$REPO_DIR/sub/deeper"
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
   [ -d "$target/main" ]
@@ -121,7 +121,7 @@ setup() {
   wtree_setup_plain_repo
 
   run "$WTREE_BIN" init custom-name
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ -d "$(dirname "$REPO_DIR")/custom-name/main" ]
 }
 
@@ -131,7 +131,7 @@ setup() {
   expected_origin="$(git -C "$REPO_DIR" remote get-url origin)"
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
   run git -C "$target/.bare" remote get-url origin
@@ -142,7 +142,7 @@ setup() {
   wtree_setup_plain_repo
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
   run git -C "$target/main" rev-parse --abbrev-ref --symbolic-full-name @{u}
@@ -154,10 +154,10 @@ setup() {
   git -C "$REPO_DIR" checkout -q -b local-only
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
-  [ -d "$target/local-only" ]
+  [ -d "$target/local-only" ] || return 1
   run git -C "$target/local-only" rev-parse --abbrev-ref --symbolic-full-name @{u}
   [ "$status" -ne 0 ]
 }
@@ -168,14 +168,14 @@ setup() {
   before_head="$(git -C "$REPO_DIR" rev-parse HEAD)"
 
   run "$WTREE_BIN" init
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
 
-  [ -d "$REPO_DIR/.git" ]
-  [ ! -d "$REPO_DIR/.bare" ]
+  [ -d "$REPO_DIR/.git" ] || return 1
+  [ ! -d "$REPO_DIR/.bare" ] || return 1
   run git -C "$REPO_DIR" rev-parse --is-bare-repository
-  [ "$output" = "false" ]
+  [ "$output" = "false" ] || return 1
   run git -C "$REPO_DIR" rev-parse HEAD
-  [ "$output" = "$before_head" ]
+  [ "$output" = "$before_head" ] || return 1
   run git -C "$REPO_DIR" status --porcelain
   [ -z "$output" ]
 }
@@ -184,7 +184,7 @@ setup() {
   wtree_setup_plain_repo
 
   run "$WTREE_BIN" init nested/dir
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"plain directory name"* ]]
 }
 
@@ -198,7 +198,7 @@ setup() {
   cd repo
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$output" == *"no commits"* ]]
 }
 
@@ -207,8 +207,8 @@ setup() {
   rm -rf "$ORIGIN_DIR"
 
   run "$WTREE_BIN" init
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"fetch failed"* ]]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$output" == *"fetch failed"* ]] || return 1
   local target
   target="$(dirname "$REPO_DIR")/$(basename "$REPO_DIR")-wtree"
   [ ! -e "$target" ]

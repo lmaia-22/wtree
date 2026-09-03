@@ -8,8 +8,8 @@ setup() {
   rm -rf feature/x
 
   run "$WTREE_BIN" clean <<<"n"
-  [[ "$output" == *"BROKEN"* ]]
-  [[ "$output" == *"feature/x"* ]]
+  [[ "$output" == *"BROKEN"* ]] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
   [[ "$output" != *"MERGED"* ]]
 }
 
@@ -20,8 +20,8 @@ setup() {
   git push -q origin --delete feature/x
 
   run "$WTREE_BIN" clean <<<"n"
-  [[ "$output" == *"MERGED"* ]]
-  [[ "$output" == *"feature/x"* ]]
+  [[ "$output" == *"MERGED"* ]] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
   [[ "$output" != *"BROKEN"* ]]
 }
 
@@ -33,8 +33,8 @@ setup() {
   echo "uncommitted" >feature/x/scratch.txt
 
   run "$WTREE_BIN" clean <<<"n"
-  [[ "$output" == *"SKIPPED"* ]]
-  [[ "$output" == *"feature/x"* ]]
+  [[ "$output" == *"SKIPPED"* ]] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
   [[ "$output" != *"MERGED"* ]]
 }
 
@@ -43,7 +43,7 @@ setup() {
   "$WTREE_BIN" add feature/never-pushed >/dev/null
 
   run "$WTREE_BIN" clean
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"nothing to clean"* ]]
 }
 
@@ -53,7 +53,7 @@ setup() {
   rm -rf feature/x
 
   run "$WTREE_BIN" clean <<<"n"
-  [[ "$output" == *"aborted"* ]]
+  [[ "$output" == *"aborted"* ]] || return 1
   run git worktree list --porcelain
   [[ "$output" == *"feature/x"* ]]
 }
@@ -64,9 +64,9 @@ setup() {
   rm -rf feature/x
 
   run "$WTREE_BIN" clean <<<"y"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   run git worktree list --porcelain
-  [[ "$output" != *"feature/x"* ]]
+  [[ "$output" != *"feature/x"* ]] || return 1
   run git -C .bare branch --list feature/x
   [[ -n "$output" ]]
 }
@@ -78,8 +78,8 @@ setup() {
   git push -q origin --delete feature/x
 
   run "$WTREE_BIN" clean <<<"y"
-  [ "$status" -eq 0 ]
-  [ ! -d "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ ! -d "$PROJECT_ROOT/feature/x" ] || return 1
   run git -C .bare branch --list feature/x
   [ -z "$output" ]
 }
@@ -88,6 +88,6 @@ setup() {
   wtree_setup_project
 
   run "$WTREE_BIN" clean
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"nothing to clean"* ]]
 }

@@ -13,9 +13,9 @@ EOF
   chmod +x "$PROJECT_ROOT/.wtree-hook"
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
-  [ "$(cat "$PROJECT_ROOT/feature/x/.hook-cwd")" = "$PROJECT_ROOT/feature/x" ]
-  [ "$(cat "$PROJECT_ROOT/feature/x/.hook-branch")" = "feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ "$(cat "$PROJECT_ROOT/feature/x/.hook-cwd")" = "$PROJECT_ROOT/feature/x" ] || return 1
+  [ "$(cat "$PROJECT_ROOT/feature/x/.hook-branch")" = "feature/x" ] || return 1
   [ "$(cat "$PROJECT_ROOT/feature/x/.hook-root")" = "$PROJECT_ROOT" ]
 }
 
@@ -33,7 +33,7 @@ EOF
   chmod +x "$PROJECT_ROOT/.wtree-hook"
 
   run "$WTREE_BIN" add feature/deeply/nested/thing
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ "$(cat "$PROJECT_ROOT/feature/deeply/nested/thing/.env")" = "SECRET=1" ]
 }
 
@@ -46,8 +46,8 @@ EOF
   chmod +x "$PROJECT_ROOT/.wtree-hook"
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
-  [ -d "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ -d "$PROJECT_ROOT/feature/x" ] || return 1
   [[ "$output" == *".wtree-hook exited 3"* ]]
 }
 
@@ -60,9 +60,9 @@ EOF
   # deliberately not chmod +x
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
-  [ -d "$PROJECT_ROOT/feature/x" ]
-  [ ! -f "$PROJECT_ROOT/feature/x/should-not-run.txt" ]
+  [ "$status" -eq 0 ] || return 1
+  [ -d "$PROJECT_ROOT/feature/x" ] || return 1
+  [ ! -f "$PROJECT_ROOT/feature/x/should-not-run.txt" ] || return 1
   [[ "$output" == *"not executable"* ]]
 }
 
@@ -70,6 +70,6 @@ EOF
   wtree_setup_project
 
   run "$WTREE_BIN" add feature/x
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" != *"hook"* ]]
 }

@@ -7,12 +7,12 @@ setup() {
   "$WTREE_BIN" add feature/x >/dev/null
 
   run "$WTREE_BIN" status
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local clean_output
   clean_output=$(strip_color "$output")
-  [[ "$clean_output" == *"BRANCH"*"AHEAD/BEHIND"*"STATE"*"IDENTITY"* ]]
-  [[ "$clean_output" == *"main"* ]]
-  [[ "$clean_output" == *"feature/x"* ]]
+  [[ "$clean_output" == *"BRANCH"*"AHEAD/BEHIND"*"STATE"*"IDENTITY"* ]] || return 1
+  [[ "$clean_output" == *"main"* ]] || return 1
+  [[ "$clean_output" == *"feature/x"* ]] || return 1
   [[ "$clean_output" != *".bare"* ]]
 }
 
@@ -43,7 +43,7 @@ setup() {
   run "$WTREE_BIN" status
   local clean_output
   clean_output=$(strip_color "$output")
-  [[ "$clean_output" == *"dirty"* ]]
+  [[ "$clean_output" == *"dirty"* ]] || return 1
   [[ "$clean_output" == *"clean"* ]]
 }
 
@@ -68,12 +68,19 @@ setup() {
   # the printf color-padding bug, where the color escapes were counted
   # as part of the padded field width and shifted this column left by
   # the length of the color/reset escape sequences.
+  #
+  # The `|| return 1` inside the loop matters here specifically: a bats
+  # test body (and any loop inside it) runs in a context where its own
+  # exit status is being tested, which strips implicit errexit
+  # propagation - without it, a mismatch on an early row would be
+  # silently overwritten by a later, correctly-aligned row, and only
+  # the LAST row would actually be checked.
   local before
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     char="${line:$header_idx:1}"
     before="${line:$((header_idx - 1)):1}"
-    [[ "$char" != " " && "$before" == " " ]]
+    [[ "$char" != " " && "$before" == " " ]] || return 1
   done <<<"$(tail -n +2 <<<"$clean_output")"
 }
 
@@ -83,9 +90,9 @@ setup() {
   rm -rf feature/x
 
   run "$WTREE_BIN" status
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   local clean_output
   clean_output=$(strip_color "$output")
-  [[ "$clean_output" == *"broken"* ]]
+  [[ "$clean_output" == *"broken"* ]] || return 1
   [[ "$clean_output" == *"main"* ]]
 }

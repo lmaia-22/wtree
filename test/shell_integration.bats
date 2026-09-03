@@ -6,7 +6,7 @@ setup() {
 
 @test "zsh: sourcing shell/wtree.zsh defines a wtree function" {
   run zsh -fc "source '$WTREE_ROOT/shell/wtree.zsh'; whence -w wtree"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"wtree: function"* ]]
 }
 
@@ -21,7 +21,7 @@ setup() {
     wtree switch main
     pwd
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ "$output" = "$PROJECT_ROOT/main" ]
 }
 
@@ -36,7 +36,7 @@ setup() {
     echo \"exit:\$?\"
     pwd
   "
-  [[ "$output" == *"exit:1"* ]]
+  [[ "$output" == *"exit:1"* ]] || return 1
   [[ "$output" == *"$PROJECT_ROOT/main"* ]]
 }
 
@@ -52,7 +52,7 @@ setup() {
     wtree ship <<<'y'
     pwd
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"$PROJECT_ROOT/main"* ]]
 }
 
@@ -74,8 +74,8 @@ setup() {
     cd '$PROJECT_ROOT/main'
     _wtree_branches
   "
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"main"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"main"* ]] || return 1
   [[ "$output" == *"feature/x"* ]]
 }
 
@@ -113,9 +113,9 @@ compadd() {
     CURRENT=2
     _wtree
   "
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"clean"* ]]
-  [[ "$output" == *"switch"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"clean"* ]] || return 1
+  [[ "$output" == *"switch"* ]] || return 1
   [[ "$output" == *"ship"* ]]
 }
 
@@ -131,7 +131,7 @@ compadd() {
     CURRENT=3
     _wtree
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"feature/x"* ]]
 }
 
@@ -139,7 +139,7 @@ compadd() {
 
 @test "bash: sourcing shell/wtree.bash defines a wtree function" {
   run bash -c "source '$WTREE_ROOT/shell/wtree.bash'; type -t wtree"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ "$output" = "function" ]
 }
 
@@ -154,7 +154,7 @@ compadd() {
     wtree switch main
     pwd
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ "$output" = "$PROJECT_ROOT/main" ]
 }
 
@@ -169,7 +169,7 @@ compadd() {
     echo \"exit:\$?\"
     pwd
   "
-  [[ "$output" == *"exit:1"* ]]
+  [[ "$output" == *"exit:1"* ]] || return 1
   [[ "$output" == *"$PROJECT_ROOT/main"* ]]
 }
 
@@ -185,7 +185,7 @@ compadd() {
     wtree ship <<<'y'
     pwd
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"$PROJECT_ROOT/main"* ]]
 }
 
@@ -197,9 +197,9 @@ compadd() {
     _wtree_complete
     printf '%s\n' \"\${COMPREPLY[@]}\"
   "
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"clean"* ]]
-  [[ "$output" == *"switch"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"clean"* ]] || return 1
+  [[ "$output" == *"switch"* ]] || return 1
   [[ "$output" == *"ship"* ]]
 }
 
@@ -215,6 +215,6 @@ compadd() {
     _wtree_complete
     printf '%s\n' \"\${COMPREPLY[@]}\"
   "
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"feature/x"* ]]
 }

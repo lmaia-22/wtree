@@ -8,7 +8,7 @@ setup() {
   wtree_setup_project
 
   run --separate-stderr "$WTREE_BIN" pr
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$stderr" == *"run this from inside a specific worktree"* ]]
 }
 
@@ -17,7 +17,7 @@ setup() {
   cd .bare
 
   run --separate-stderr "$WTREE_BIN" ship
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$stderr" == *"run this from inside a specific worktree"* ]]
 }
 
@@ -26,7 +26,7 @@ setup() {
   cd main
 
   run --separate-stderr "$WTREE_BIN" ship
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$stderr" == *"won't ship the default branch"* ]]
 }
 
@@ -37,7 +37,7 @@ setup() {
   cd feature/x
 
   run --separate-stderr "$WTREE_BIN" ship
-  [ "$status" -ne 0 ]
+  [ "$status" -ne 0 ] || return 1
   [[ "$stderr" == *"uncommitted changes"* ]]
 }
 
@@ -51,8 +51,8 @@ setup() {
   export GH_MOCK_PR_URL="https://example.invalid/pr/7"
 
   run "$WTREE_BIN" pr
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"pr/7"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"pr/7"* ]] || return 1
   run git rev-parse --abbrev-ref --symbolic-full-name @{u}
   [ "$output" = "origin/feature/x" ]
 }
@@ -65,7 +65,7 @@ setup() {
   wtree_install_gh_mock
 
   run "$WTREE_BIN" pr
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" != *"setting upstream"* ]]
 }
 
@@ -84,14 +84,14 @@ setup() {
   cd hotfix/y
 
   run git rev-parse --abbrev-ref --symbolic-full-name @{u}
-  [ "$output" = "origin/dev" ]
+  [ "$output" = "origin/dev" ] || return 1
 
   wtree_install_gh_mock
   export GH_MOCK_PR_URL="https://example.invalid/pr/9"
 
   run "$WTREE_BIN" pr
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"pr/9"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"pr/9"* ]] || return 1
   run git rev-parse --abbrev-ref --symbolic-full-name @{u}
   [ "$output" = "origin/hotfix/y" ]
 }
@@ -106,8 +106,8 @@ setup() {
   export GH_MOCK_PR_URL="https://example.invalid/pr/9"
 
   run "$WTREE_BIN" pr
-  [ "$status" -eq 0 ]
-  [[ "$(strip_color "$output")" == *"identity(gh): work-account"* ]]
+  [ "$status" -eq 0 ] || return 1
+  [[ "$(strip_color "$output")" == *"identity(gh): work-account"* ]] || return 1
   [[ "$output" == *"pr/9"* ]]
 }
 
@@ -120,7 +120,7 @@ setup() {
   # No GH_MOCK_API_ALLOWED_TOKEN set - neither account can see the repo.
 
   run "$WTREE_BIN" pr
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [[ "$output" != *"identity(gh)"* ]]
 }
 
@@ -134,8 +134,8 @@ setup() {
   export GH_MOCK_PR_VIEW_FAIL=1
 
   run --separate-stderr "$WTREE_BIN" ship
-  [ "$status" -ne 0 ]
-  [[ "$stderr" == *"no open PR for 'feature/x'"* ]]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$stderr" == *"no open PR for 'feature/x'"* ]] || return 1
   [[ "$stderr" == *"wtree pr"* ]]
 }
 
@@ -152,10 +152,10 @@ setup() {
   export GH_MOCK_MERGED_AT="2026-01-01T00:00:00Z"
 
   run --separate-stderr "$WTREE_BIN" ship <<<"y"
-  [ "$status" -eq 0 ]
-  [ "$output" = "$PROJECT_ROOT/main" ]
-  [[ "$stderr" == *"merging..."* ]]
-  [ ! -d "$PROJECT_ROOT/feature/x" ]
+  [ "$status" -eq 0 ] || return 1
+  [ "$output" = "$PROJECT_ROOT/main" ] || return 1
+  [[ "$stderr" == *"merging..."* ]] || return 1
+  [ ! -d "$PROJECT_ROOT/feature/x" ] || return 1
   run git -C "$PROJECT_ROOT/.bare" branch --list feature/x
   [ -z "$output" ]
 }
@@ -169,8 +169,8 @@ setup() {
   export GH_MOCK_MERGED_AT="null"
 
   run --separate-stderr "$WTREE_BIN" ship <<<"y"
-  [ "$status" -ne 0 ]
-  [[ "$stderr" == *"was not merged"* ]]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$stderr" == *"was not merged"* ]] || return 1
   [ -d "$PROJECT_ROOT/feature/x" ]
 }
 
@@ -182,7 +182,7 @@ setup() {
   export GH_MOCK_MERGED_AT="2026-01-01T00:00:00Z"
 
   run --separate-stderr "$WTREE_BIN" ship <<<"y"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 0 ] || return 1
   [ "$output" = "$PROJECT_ROOT/main" ]
 }
 
@@ -200,8 +200,8 @@ setup() {
   export GH_MOCK_API_ALLOWED_TOKEN="token-for-work-account"
 
   run --separate-stderr "$WTREE_BIN" ship <<<"y"
-  [ "$status" -eq 0 ]
-  [ "$output" = "$PROJECT_ROOT/main" ]
+  [ "$status" -eq 0 ] || return 1
+  [ "$output" = "$PROJECT_ROOT/main" ] || return 1
   [[ "$(strip_color "$stderr")" == *"identity(gh): work-account"* ]]
 }
 
@@ -213,7 +213,7 @@ setup() {
   export GH_MOCK_MERGED_AT="2026-01-01T00:00:00Z"
 
   run --separate-stderr "$WTREE_BIN" ship <<<"n"
-  [ "$status" -ne 0 ]
-  [[ "$stderr" == *"aborted"* ]]
+  [ "$status" -ne 0 ] || return 1
+  [[ "$stderr" == *"aborted"* ]] || return 1
   [ -d "$PROJECT_ROOT/feature/x" ]
 }
