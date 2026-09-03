@@ -57,30 +57,52 @@ and `wtree ship`.
 
 ## Usage
 
+`wtree --version` prints the installed version.
+
+### Starting a project
+
 ```bash
 cd ~/Developer/some-folder
 wtree clone git@github.com:you/your-repo.git
 cd your-repo
-wtree add feature/x              # new worktree, new branch
-wtree add hotfix/y origin/main   # new worktree, branched from origin/main
-wtree status                     # branch / ahead-behind / dirty / identity, per worktree
-wtree switch feature/x           # cd into that worktree (shell integration required)
-wtree switch                     # fzf picker, then cd into your pick
-wtree clean                      # remove broken and already-merged worktrees (with confirmation)
-wtree rm feature/x               # remove a worktree
-wtree list                       # raw `git worktree list`
-wtree doctor                     # check for optional dependencies (fzf, gh)
-wtree --version                  # print the wtree version
-
-cd feature/x
-wtree pr                         # push and open a PR for this branch
-wtree ship                       # merge the PR and clean up (with confirmation)
 ```
 
 Already have the repo checked out locally? `cd` into it and run
 `wtree init` instead of `clone` — it creates a new sibling
 `<repo>-wtree` project from your existing checkout (leaving the
 original directory untouched) rather than cloning fresh from a URL.
+
+### Working on a branch
+
+```bash
+wtree add feature/x              # new worktree, new branch
+wtree add hotfix/y origin/main   # new worktree, branched from origin/main
+wtree switch feature/x           # cd into that worktree (shell integration required)
+wtree switch                     # fzf picker, then cd into your pick
+```
+
+### Checking on things
+
+```bash
+wtree status                     # branch / ahead-behind / dirty / identity, per worktree
+wtree list                       # raw `git worktree list`
+wtree doctor                     # check for optional dependencies (fzf, gh)
+```
+
+### Shipping a change
+
+```bash
+cd feature/x
+wtree pr                         # push and open a PR for this branch
+wtree ship                       # merge the PR and clean up (with confirmation)
+```
+
+### Cleaning up
+
+```bash
+wtree clean                      # remove broken and already-merged worktrees (with confirmation)
+wtree rm feature/x               # remove a worktree
+```
 
 Run `add`, `rm`, `status`, `switch`, `clean`, and `list` from anywhere
 inside a project created with `wtree clone` or `wtree init` — they walk
