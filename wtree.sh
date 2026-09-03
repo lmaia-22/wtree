@@ -358,6 +358,16 @@ cmd_rm() {
 	cd "$root"
 	git worktree remove "$branch" "${@:2}"
 	git worktree prune
+
+	# git worktree remove only deletes the leaf directory; clean up now-empty
+	# parent dirs left behind by branch names with slashes (e.g. feature/p).
+	local parent
+	parent=$(dirname -- "$branch")
+	while [[ "$parent" != "." && "$parent" != "/" ]]; do
+		rmdir "$root/$parent" 2>/dev/null || break
+		parent=$(dirname -- "$parent")
+	done
+
 	ok "removed worktree '$branch'"
 }
 
