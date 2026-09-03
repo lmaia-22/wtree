@@ -241,9 +241,13 @@ cmd_add() {
 	whoami_here "$root/$branch"
 }
 
-# Runs $root/.wtree-hook (if present) with the new worktree as cwd and
-# the branch name as $1. Never at project root nor under any worktree,
-# so it's local-only by construction — nothing here is git-tracked.
+# Runs $root/.wtree-hook (if present) with the new worktree as cwd, the
+# branch name as $1, and the project root as $2 (so a hook can reach a
+# sibling worktree without counting ../ segments against the branch
+# name's own slash-depth, e.g. cp "$2/main/.env" . works the same for
+# fix-abc and feature/deeply/nested/thing alike). Never at project root
+# nor under any worktree, so it's local-only by construction — nothing
+# here is git-tracked.
 run_add_hook() {
 	local root="$1" branch="$2"
 	local hook="$root/.wtree-hook"
@@ -256,7 +260,7 @@ run_add_hook() {
 	fi
 
 	local rc=0
-	(cd "$root/$branch" && "$hook" "$branch") || rc=$?
+	(cd "$root/$branch" && "$hook" "$branch" "$root") || rc=$?
 	if [[ $rc -eq 0 ]]; then
 		ok "hook completed"
 	else

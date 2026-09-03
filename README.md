@@ -118,8 +118,9 @@ project root (next to `.bare`):
 
 ```bash
 #!/usr/bin/env bash
-# $1 is the branch name; cwd is already the new worktree.
-cp ../main/.env .
+# $1 is the branch name; $2 is the project root; cwd is already the
+# new worktree.
+cp "$2/main/.env" .
 npm install
 ```
 
@@ -128,6 +129,12 @@ directory. It only lives at the project root, never inside any
 worktree, so it's local-only by construction — nothing commits it,
 nothing a cloned repo can plant on you. A failing hook prints a warning
 but never removes the worktree it just created.
+
+Use `$2` rather than a fixed number of `../` to reach a sibling
+worktree — how deep the new worktree sits depends on the branch name's
+own slash-depth (`fix-abc` vs. `feature/x` vs.
+`feature/deeply/nested/thing`), but `$2` is always the absolute project
+root regardless.
 
 `.wtree-hook` has no file extension, so most editors show it as a
 generic file with no syntax highlighting. In VS Code, add this to your
