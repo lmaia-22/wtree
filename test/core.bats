@@ -20,6 +20,17 @@ setup() {
   [ -d "proj/main" ]
 }
 
+@test "clone explains itself when the remote can't be read" {
+  cd "$BATS_TEST_TMPDIR"
+
+  run "$WTREE_BIN" clone "$BATS_TEST_TMPDIR/does-not-exist.git" proj
+  [ "$status" -ne 0 ] || return 1
+  [[ "$output" == *"couldn't read remote"* ]] || return 1
+  [[ "$output" == *"insteadOf"* ]] || return 1
+  # The failed lookup must not leave a half-made project behind.
+  [ ! -e proj ]
+}
+
 @test "clone refuses if the target directory already exists" {
   cd "$BATS_TEST_TMPDIR"
   mkdir origin.git

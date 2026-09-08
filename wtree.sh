@@ -187,8 +187,22 @@ cmd_clone() {
 	[[ -e "$name" ]] && die "'$name' already exists here"
 
 	info "looking up default branch"
+	# Run ls-remote on its own rather than straight into the awk pipe:
+	# under `set -o pipefail` a failed lookup would otherwise kill the
+	# script with nothing but git's raw stderr, which never mentions the
+	# most common cause on a multi-account machine (see the die below).
+	local symref
+	if ! symref=$(git ls-remote --symref "$url" HEAD); then
+		die "couldn't read remote '$url'
+  the repo may not exist, or the identity git just used has no access to it
+  if you keep per-directory identities (includeIf + url.insteadOf), remember
+  those only load inside an existing repo — not in the directory you clone
+  into, so the rewrite isn't active here. pass the rewritten url yourself:
+    wtree clone git@github.com-work:owner/repo.git"
+	fi
+
 	local default_branch
-	default_branch=$(git ls-remote --symref "$url" HEAD | awk '/^ref:/{sub(".*refs/heads/", "", $2); print $2}')
+	default_branch=$(awk '/^ref:/{sub(".*refs/heads/", "", $2); print $2}' <<<"$symref")
 	if [[ -z "$default_branch" ]]; then
 		default_branch="main"
 	fi
