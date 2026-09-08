@@ -124,6 +124,12 @@ cp "$2/main/.env" .
 npm install
 ```
 
+Make it executable — `wtree add` skips a hook it can't run:
+
+```bash
+chmod +x .wtree-hook
+```
+
 `wtree add` runs it automatically, with the new worktree as the working
 directory. It only lives at the project root, never inside any
 worktree, so it's local-only by construction — nothing commits it,
