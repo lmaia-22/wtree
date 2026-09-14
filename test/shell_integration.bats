@@ -135,6 +135,71 @@ compadd() {
   [[ "$output" == *"feature/x"* ]]
 }
 
+@test "zsh: _wtree_worktrees lists only branches that have a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run zsh -fc "
+    source '$WTREE_ROOT/shell/wtree.zsh'
+    cd '$PROJECT_ROOT/main'
+    _wtree_worktrees
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"main"* ]] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
+}
+
+@test "zsh: _wtree_branches still lists branches without a worktree (for add)" {
+  wtree_setup_project
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run zsh -fc "
+    source '$WTREE_ROOT/shell/wtree.zsh'
+    cd '$PROJECT_ROOT/main'
+    _wtree_branches
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"no-worktree"* ]]
+}
+
+@test "zsh: _wtree completion after 'rm' offers only branches with a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run zsh -fc "
+    cd '$PROJECT_ROOT/main'
+    source '$WTREE_ROOT/shell/wtree.zsh'
+    $ZSH_COMPADD_MOCK
+    words=(wtree rm '')
+    CURRENT=3
+    _wtree
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
+}
+
+@test "zsh: _wtree completion after 'switch' offers only branches with a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run zsh -fc "
+    cd '$PROJECT_ROOT/main'
+    source '$WTREE_ROOT/shell/wtree.zsh'
+    $ZSH_COMPADD_MOCK
+    words=(wtree switch '')
+    CURRENT=3
+    _wtree
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
+}
+
 # ── bash ──
 
 @test "bash: sourcing shell/wtree.bash defines a wtree function" {
@@ -217,4 +282,69 @@ compadd() {
   "
   [ "$status" -eq 0 ] || return 1
   [[ "$output" == *"feature/x"* ]]
+}
+
+@test "bash: _wtree_worktrees lists only branches that have a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run bash -c "
+    source '$WTREE_ROOT/shell/wtree.bash'
+    cd '$PROJECT_ROOT/main'
+    _wtree_worktrees
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"main"* ]] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
+}
+
+@test "bash: _wtree_branches still lists branches without a worktree (for add)" {
+  wtree_setup_project
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run bash -c "
+    source '$WTREE_ROOT/shell/wtree.bash'
+    cd '$PROJECT_ROOT/main'
+    _wtree_branches
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"no-worktree"* ]]
+}
+
+@test "bash: completion after 'rm' offers only branches with a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run bash -c "
+    cd '$PROJECT_ROOT/main'
+    source '$WTREE_ROOT/shell/wtree.bash'
+    COMP_WORDS=(wtree rm '')
+    COMP_CWORD=2
+    _wtree_complete
+    printf '%s\\n' \"\${COMPREPLY[@]}\"
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
+}
+
+@test "bash: completion after 'switch' offers only branches with a worktree" {
+  wtree_setup_project
+  "$WTREE_BIN" add feature/x >/dev/null
+  git -C "$PROJECT_ROOT/.bare" branch no-worktree main
+
+  run bash -c "
+    cd '$PROJECT_ROOT/main'
+    source '$WTREE_ROOT/shell/wtree.bash'
+    COMP_WORDS=(wtree switch '')
+    COMP_CWORD=2
+    _wtree_complete
+    printf '%s\\n' \"\${COMPREPLY[@]}\"
+  "
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"feature/x"* ]] || return 1
+  [[ "$output" != *"no-worktree"* ]]
 }
