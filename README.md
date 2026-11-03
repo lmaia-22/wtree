@@ -154,6 +154,38 @@ highlighting and a shell-script icon instead:
 }
 ```
 
+## Base branch rules
+
+By default a new branch starts from the default branch. To have some
+branches start elsewhere, drop a `.wtree-bases` file at the project
+root (next to `.bare`), one `<pattern> <base>` rule per line:
+
+```
+# pattern        base
+pre-release/*    staging
+release/*        master
+```
+
+`wtree add pre-release/1.0` then branches from a freshly fetched
+`origin/staging`, and `wtree add release/2.1` from `origin/master`.
+Patterns are shell globs, the first matching line wins, and blank
+lines and `#` comments are ignored. Like `.wtree-hook`, the file is
+per-project and never git-tracked, so each repo can name its own
+production branch (`master`, `prod`, ...).
+
+Rules only pick the start of a **new** branch:
+
+- An explicit start point (`wtree add release/2.1 origin/hotfix`) wins
+  over any rule.
+- A branch that already exists, locally or on origin, is checked out
+  as-is and never moved onto the rule's base.
+- If the matched base doesn't exist on origin, `wtree add` stops with
+  an error instead of branching from the wrong place.
+
+When reusing an existing local branch, `wtree add` warns if it is
+behind its `origin/` counterpart, and if you passed a start point that
+it had to ignore.
+
 ## Why
 
 Plain `git worktree` works, but juggling worktree paths by hand gets

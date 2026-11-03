@@ -245,6 +245,43 @@ check_branch_path_collision() {
 	return 0
 }
 
+# Looks up a start point for a brand-new branch in $root/.wtree-bases:
+# one "<glob> <base>" rule per line (blank lines and # comments
+# ignored), first match wins, and the base resolves to origin/<base>.
+# Like .wtree-hook it lives at the project root, outside every
+# worktree, so it's per-project and never git-tracked. Prints nothing
+# when there's no file or no rule matches; dies when the matched base
+# isn't on origin rather than quietly branching from the wrong place.
+base_from_rules() {
+	local root="$1" branch="$2"
+	local file="$root/.wtree-bases"
+	[[ -f "$file" ]] || return 0
+
+	local pattern base _
+	while read -r pattern base _ || [[ -n "$pattern" ]]; do
+		[[ -z "$pattern" || "$pattern" == \#* || -z "$base" ]] && continue
+		# shellcheck disable=SC2053 # $pattern is deliberately a glob
+		[[ "$branch" == $pattern ]] || continue
+		git show-ref --verify --quiet "refs/remotes/origin/$base" ||
+			die "rule '$pattern' in .wtree-bases says to branch from origin/$base, but origin has no '$base' branch"
+		info "branching from origin/$base (rule: $pattern)" >&2
+		echo "origin/$base"
+		return 0
+	done <"$file"
+}
+
+# Warns when a local branch about to be checked out is behind its
+# origin counterpart, since a reused local branch is never updated.
+warn_if_behind_origin() {
+	local branch="$1" behind
+	git show-ref --verify --quiet "refs/remotes/origin/$branch" || return 0
+	behind=$(git rev-list --count "$branch..origin/$branch")
+	if [[ "$behind" -gt 0 ]]; then
+		warn "local $branch is $behind commit$([[ $behind -eq 1 ]] || echo s) behind origin/$branch"
+	fi
+	return 0
+}
+
 cmd_add() {
 	local branch="${1:?branch name required}"
 	local start="${2:-}"
@@ -260,9 +297,14 @@ cmd_add() {
 	fi
 
 	if git show-ref --verify --quiet "refs/heads/$branch"; then
+		[[ -n "$start" ]] && warn "$branch already exists — ignoring start point $start"
+		warn_if_behind_origin "$branch"
 		git worktree add "$branch" "$branch"
 	else
 		check_branch_path_collision "$branch"
+		if [[ -z "$start" ]] && ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+			start=$(base_from_rules "$root" "$branch")
+		fi
 		if [[ -n "$start" ]]; then
 			git worktree add -b "$branch" "$branch" "$start"
 		elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
