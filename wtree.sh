@@ -282,16 +282,23 @@ base_from_rules() {
 	done <"$hook"
 }
 
-# Warns when a local branch about to be checked out is behind its
-# origin counterpart, since a reused local branch is never updated.
-warn_if_behind_origin() {
-	local branch="$1" behind
+# Brings a reused local branch, just checked out at $wt, up to date
+# with its origin counterpart. Only fast-forwards: a branch with local
+# commits origin lacks is left alone with a warning, never merged.
+# Runs after `git worktree add` so the merge updates the new worktree's
+# files too, and so a branch checked out elsewhere (which makes the add
+# fail) is never moved under another worktree.
+ff_to_origin() {
+	local wt="$1" branch="$2" ahead behind
 	git show-ref --verify --quiet "refs/remotes/origin/$branch" || return 0
-	behind=$(git rev-list --count "$branch..origin/$branch")
-	if [[ "$behind" -gt 0 ]]; then
-		warn "local $branch is $behind commit$([[ $behind -eq 1 ]] || echo s) behind origin/$branch"
+	read -r ahead behind < <(git rev-list --left-right --count "$branch...origin/$branch")
+	[[ "$behind" -gt 0 ]] || return 0
+	if [[ "$ahead" -gt 0 ]]; then
+		warn "local $branch has diverged from origin/$branch ($ahead ahead, $behind behind) — not fast-forwarding"
+		return 0
 	fi
-	return 0
+	git -C "$wt" merge --ff-only --quiet "origin/$branch"
+	info "fast-forwarded $branch by $behind commit$([[ $behind -eq 1 ]] || echo s) to origin/$branch"
 }
 
 cmd_add() {
@@ -310,8 +317,8 @@ cmd_add() {
 
 	if git show-ref --verify --quiet "refs/heads/$branch"; then
 		[[ -n "$start" ]] && warn "$branch already exists — ignoring start point $start"
-		warn_if_behind_origin "$branch"
 		git worktree add "$branch" "$branch"
+		ff_to_origin "$root/$branch" "$branch"
 	else
 		check_branch_path_collision "$branch"
 		local on_origin=false rule_base=""

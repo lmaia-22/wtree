@@ -188,9 +188,10 @@ Rules only pick the start of a **new** branch:
   it, so `git pull` won't merge `master` into your release branch.
   `wtree pr` sets the branch's own upstream on first push.
 
-When reusing an existing local branch, `wtree add` warns if it is
-behind its `origin/` counterpart, and if you passed a start point that
-it had to ignore.
+When reusing an existing local branch, `wtree add` fast-forwards it to
+its `origin/` counterpart if it's behind. If it has diverged (it has
+local commits origin lacks), it warns and leaves the branch as is.
+It also warns if you passed a start point that it had to ignore.
 
 ## Why
 

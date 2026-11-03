@@ -178,19 +178,40 @@ EOF
   [[ "$(strip_color "$output")" == *"feature/existing already exists — ignoring start point origin/main"* ]]
 }
 
-@test "add warns when an existing local branch is behind its origin counterpart" {
+@test "add fast-forwards an existing local branch that's behind its origin counterpart" {
   wtree_setup_project
   git -C .bare branch release/2.1
   git -C main checkout -q -b tmp
   git -c user.name=test -c user.email=test@test.invalid -C main commit -q --allow-empty -m one
-  git -c user.name=test -c user.email=test@test.invalid -C main commit -q --allow-empty -m two
+  # A real file, not an empty commit, so the test catches a ref-only
+  # update that leaves the new worktree's files and index stale.
+  echo x >main/two.txt
+  git -C main add two.txt
+  git -c user.name=test -c user.email=test@test.invalid -C main commit -q -m two
   git -C main push -q origin tmp:release/2.1
   git -C main checkout -q main
   git -C main branch -q -D tmp
 
   run "$WTREE_BIN" add release/2.1
   [ "$status" -eq 0 ] || return 1
-  [[ "$(strip_color "$output")" == *"local release/2.1 is 2 commits behind origin/release/2.1"* ]]
+  [[ "$(strip_color "$output")" == *"fast-forwarded release/2.1 by 2 commits to origin/release/2.1"* ]] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "two" ] || return 1
+  [ -f "$PROJECT_ROOT/release/2.1/two.txt" ] || return 1
+  [ -z "$(git -C "$PROJECT_ROOT/release/2.1" status --porcelain)" ]
+}
+
+@test "add warns and leaves alone an existing local branch that has diverged from origin" {
+  wtree_setup_project
+  push_base_branch release/2.1
+  # Local release/2.1 = main + "local"; origin's = main + "release/2.1".
+  git -C main checkout -q -b release/2.1
+  git -c user.name=test -c user.email=test@test.invalid -C main commit -q --allow-empty -m local
+  git -C main checkout -q main
+
+  run "$WTREE_BIN" add release/2.1
+  [ "$status" -eq 0 ] || return 1
+  [[ "$(strip_color "$output")" == *"local release/2.1 has diverged from origin/release/2.1 (1 ahead, 1 behind) — not fast-forwarding"* ]] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "local" ]
 }
 
 @test "add doesn't warn about an existing local branch that's up to date with origin" {
