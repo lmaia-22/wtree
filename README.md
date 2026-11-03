@@ -181,6 +181,9 @@ Rules only pick the start of a **new** branch:
   as-is and never moved onto the rule's base.
 - If the matched base doesn't exist on origin, `wtree add` stops with
   an error instead of branching from the wrong place.
+- The base is only the starting point: the new branch doesn't track
+  it, so `git pull` won't merge `master` into your release branch.
+  `wtree pr` sets the branch's own upstream on first push.
 
 When reusing an existing local branch, `wtree add` warns if it is
 behind its `origin/` counterpart, and if you passed a start point that

@@ -157,3 +157,31 @@ EOF
   [ "$status" -eq 0 ] || return 1
   [[ "$output" != *"behind"* ]]
 }
+
+@test "add doesn't make a rule's base the new branch's upstream" {
+  # A rule-picked base as upstream would make `git pull` merge prod into
+  # the release branch and `git status` report ahead/behind vs master.
+  wtree_setup_project
+  push_base_branch master
+  write_bases <<'EOF2'
+release/*    master
+EOF2
+
+  run "$WTREE_BIN" add release/2.1
+  [ "$status" -eq 0 ] || return 1
+  run git -C "$PROJECT_ROOT/release/2.1" rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$status" -ne 0 ]
+}
+
+@test "add warns and tracks origin when a remote-only branch is given a start point" {
+  wtree_setup_project
+  push_base_branch master
+  push_base_branch release/2.1
+
+  run "$WTREE_BIN" add release/2.1 origin/master
+  [ "$status" -eq 0 ] || return 1
+  [[ "$(strip_color "$output")" == *"release/2.1 already exists — ignoring start point origin/master"* ]] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "release/2.1" ] || return 1
+  run git -C "$PROJECT_ROOT/release/2.1" rev-parse --abbrev-ref --symbolic-full-name @{u}
+  [ "$output" = "origin/release/2.1" ]
+}

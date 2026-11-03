@@ -302,13 +302,23 @@ cmd_add() {
 		git worktree add "$branch" "$branch"
 	else
 		check_branch_path_collision "$branch"
-		if [[ -z "$start" ]] && ! git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-			start=$(base_from_rules "$root" "$branch")
+		local on_origin=false rule_base=""
+		git show-ref --verify --quiet "refs/remotes/origin/$branch" && on_origin=true
+		# Outside any condition so set -e still applies: base_from_rules
+		# dies (in its subshell) on a missing base, and that must abort here.
+		if ! $on_origin && [[ -z "$start" ]]; then
+			rule_base=$(base_from_rules "$root" "$branch")
 		fi
-		if [[ -n "$start" ]]; then
-			git worktree add -b "$branch" "$branch" "$start"
-		elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+
+		if $on_origin; then
+			[[ -n "$start" ]] && warn "$branch already exists — ignoring start point $start"
 			git worktree add -b "$branch" "$branch" "origin/$branch"
+		elif [[ -n "$start" ]]; then
+			git worktree add -b "$branch" "$branch" "$start"
+		elif [[ -n "$rule_base" ]]; then
+			# --no-track: the rule's base is where the branch starts, not
+			# where it pulls from or pushes to.
+			git worktree add --no-track -b "$branch" "$branch" "$rule_base"
 		else
 			git worktree add -b "$branch" "$branch"
 		fi
