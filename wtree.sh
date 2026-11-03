@@ -30,7 +30,7 @@
 
 set -euo pipefail
 
-VERSION="0.5.4"
+VERSION="0.5.5"
 
 RED=$'\033[31m'
 GREEN=$'\033[32m'
