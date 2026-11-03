@@ -17,16 +17,22 @@ tip_message() {
   git -C "$1" log -1 --format=%s
 }
 
-write_bases() {
-  cat >"$PROJECT_ROOT/.wtree-bases"
+# Reads "<pattern> <base>..." lines on stdin and writes them as
+# `# wtree-base:` directives into an executable .wtree-hook that
+# otherwise does nothing.
+write_rules() {
+  {
+    echo '#!/usr/bin/env bash'
+    sed 's/^/# wtree-base: /'
+  } >"$PROJECT_ROOT/.wtree-hook"
+  chmod +x "$PROJECT_ROOT/.wtree-hook"
 }
 
-@test "add branches a new pre-release/* branch from origin/staging per .wtree-bases" {
+@test "add branches a new pre-release/* branch from origin/staging per .wtree-hook rules" {
   wtree_setup_project
   push_base_branch staging
   push_base_branch master
-  write_bases <<'EOF'
-# pattern        base
+  write_rules <<'EOF'
 pre-release/*    staging
 release/*        master
 EOF
@@ -37,11 +43,11 @@ EOF
   [[ "$(strip_color "$output")" == *"branching from origin/staging (rule: pre-release/*)"* ]]
 }
 
-@test "add branches a new release/* branch from origin/master per .wtree-bases" {
+@test "add branches a new release/* branch from origin/master per .wtree-hook rules" {
   wtree_setup_project
   push_base_branch staging
   push_base_branch master
-  write_bases <<'EOF'
+  write_rules <<'EOF'
 pre-release/*    staging
 release/*        master
 EOF
@@ -51,15 +57,30 @@ EOF
   [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "master" ]
 }
 
-@test "add ignores blank lines and comments in .wtree-bases and uses the first matching rule" {
+@test "add reads only wtree-base directives from the hook and uses the first matching rule" {
   wtree_setup_project
   push_base_branch staging
   push_base_branch prod
-  write_bases <<'EOF'
-
+  cat >"$PROJECT_ROOT/.wtree-hook" <<'EOF'
+#!/usr/bin/env bash
 # release branches come from prod
-release/*   prod
-release/*   staging
+#wtree-base:release/*   prod
+# wtree-base: release/*   staging
+echo "release/* staging" >/dev/null
+EOF
+  chmod +x "$PROJECT_ROOT/.wtree-hook"
+
+  run "$WTREE_BIN" add release/2.1
+  [ "$status" -eq 0 ] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "prod" ]
+}
+
+@test "add uses the first listed base that exists on origin" {
+  wtree_setup_project
+  push_base_branch prod
+  push_base_branch master
+  write_rules <<'EOF'
+release/*    prod master
 EOF
 
   run "$WTREE_BIN" add release/2.1
@@ -67,10 +88,33 @@ EOF
   [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "prod" ]
 }
 
+@test "add falls through to a later listed base when earlier ones aren't on origin" {
+  wtree_setup_project
+  push_base_branch master
+  write_rules <<'EOF'
+release/*    prod master
+EOF
+
+  run "$WTREE_BIN" add release/2.1
+  [ "$status" -eq 0 ] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/release/2.1")" = "master" ] || return 1
+  [[ "$(strip_color "$output")" == *"branching from origin/master (rule: release/*)"* ]]
+}
+
+@test "add applies rules from a hook that isn't executable" {
+  wtree_setup_project
+  push_base_branch staging
+  printf '#!/usr/bin/env bash\n# wtree-base: pre-release/* staging\n' >"$PROJECT_ROOT/.wtree-hook"
+
+  run "$WTREE_BIN" add pre-release/1.0
+  [ "$status" -eq 0 ] || return 1
+  [ "$(tip_message "$PROJECT_ROOT/pre-release/1.0")" = "staging" ]
+}
+
 @test "add uses the default start point for a branch no rule matches" {
   wtree_setup_project
   push_base_branch staging
-  write_bases <<'EOF'
+  write_rules <<'EOF'
 pre-release/*    staging
 EOF
 
@@ -84,7 +128,7 @@ EOF
   wtree_setup_project
   push_base_branch staging
   push_base_branch hotfix-base
-  write_bases <<'EOF'
+  write_rules <<'EOF'
 pre-release/*    staging
 EOF
 
@@ -95,14 +139,15 @@ EOF
 
 @test "add refuses when the rule's base doesn't exist on origin, creating nothing" {
   wtree_setup_project
-  write_bases <<'EOF'
-pre-release/*    staging
+  write_rules <<'EOF'
+pre-release/*    staging prod
 EOF
 
   run "$WTREE_BIN" add pre-release/1.0
   [ "$status" -ne 0 ] || return 1
-  [[ "$output" == *"origin/staging"* ]] || return 1
+  [[ "$output" == *"staging"* && "$output" == *"prod"* ]] || return 1
   [[ "$output" == *"pre-release/*"* ]] || return 1
+  [[ "$output" == *"start point"* ]] || return 1
   [ ! -d "$PROJECT_ROOT/pre-release/1.0" ] || return 1
   ! git -C "$PROJECT_ROOT/.bare" show-ref --verify --quiet refs/heads/pre-release/1.0
 }
@@ -111,7 +156,7 @@ EOF
   wtree_setup_project
   push_base_branch staging
   push_base_branch release/2.1
-  write_bases <<'EOF'
+  write_rules <<'EOF'
 release/*    staging
 EOF
 
@@ -163,7 +208,7 @@ EOF
   # the release branch and `git status` report ahead/behind vs master.
   wtree_setup_project
   push_base_branch master
-  write_bases <<'EOF2'
+  write_rules <<'EOF2'
 release/*    master
 EOF2
 

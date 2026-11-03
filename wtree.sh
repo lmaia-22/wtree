@@ -245,29 +245,41 @@ check_branch_path_collision() {
 	return 0
 }
 
-# Looks up a start point for a brand-new branch in $root/.wtree-bases:
-# one "<glob> <base>" rule per line (blank lines and # comments
-# ignored), first match wins, and the base resolves to origin/<base>.
-# Like .wtree-hook it lives at the project root, outside every
-# worktree, so it's per-project and never git-tracked. Prints nothing
-# when there's no file or no rule matches; dies when the matched base
-# isn't on origin rather than quietly branching from the wrong place.
+# Looks up a start point for a brand-new branch from "# wtree-base:"
+# comment lines in $root/.wtree-hook, e.g.
+#   # wtree-base: release/*  prod master
+# The glob is matched against the branch name, the first matching line
+# wins, and within it the first base that exists on origin wins. The
+# lines are only read, never run, so the hook needn't be executable,
+# and since bash ignores comments they don't affect the hook itself.
+# Prints nothing when there's no hook or no rule matches; dies when no
+# listed base is on origin rather than quietly branching from the
+# wrong place.
 base_from_rules() {
 	local root="$1" branch="$2"
-	local file="$root/.wtree-bases"
-	[[ -f "$file" ]] || return 0
+	local hook="$root/.wtree-hook"
+	[[ -f "$hook" ]] || return 0
 
-	local pattern base _
-	while read -r pattern base _ || [[ -n "$pattern" ]]; do
-		[[ -z "$pattern" || "$pattern" == \#* || -z "$base" ]] && continue
+	local directive='^#[[:space:]]*wtree-base:(.*)$'
+	local line pattern base
+	local -a fields
+	while IFS= read -r line || [[ -n "$line" ]]; do
+		[[ "$line" =~ $directive ]] || continue
+		read -r -a fields <<<"${BASH_REMATCH[1]}"
+		[[ ${#fields[@]} -ge 2 ]] || continue
+		pattern="${fields[0]}"
 		# shellcheck disable=SC2053 # $pattern is deliberately a glob
 		[[ "$branch" == $pattern ]] || continue
-		git show-ref --verify --quiet "refs/remotes/origin/$base" ||
-			die "rule '$pattern' in .wtree-bases says to branch from origin/$base, but origin has no '$base' branch"
-		info "branching from origin/$base (rule: $pattern)" >&2
-		echo "origin/$base"
-		return 0
-	done <"$file"
+		for base in "${fields[@]:1}"; do
+			if git show-ref --verify --quiet "refs/remotes/origin/$base"; then
+				info "branching from origin/$base (rule: $pattern)" >&2
+				echo "origin/$base"
+				return 0
+			fi
+		done
+		die "rule '$pattern' in .wtree-hook found no base on origin (tried: ${fields[*]:1})
+  pass a start point to override: wtree add $branch origin/<branch>"
+	done <"$hook"
 }
 
 # Warns when a local branch about to be checked out is behind its

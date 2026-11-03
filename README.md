@@ -157,21 +157,23 @@ highlighting and a shell-script icon instead:
 ## Base branch rules
 
 By default a new branch starts from the default branch. To have some
-branches start elsewhere, drop a `.wtree-bases` file at the project
-root (next to `.bare`), one `<pattern> <base>` rule per line:
+branches start elsewhere, add `# wtree-base:` lines to `.wtree-hook`:
 
-```
-# pattern        base
-pre-release/*    staging
-release/*        master
+```bash
+#!/usr/bin/env bash
+# wtree-base: pre-release/*  staging
+# wtree-base: release/*      prod master
+
+cp "$2/main/.env" .
 ```
 
 `wtree add pre-release/1.0` then branches from a freshly fetched
-`origin/staging`, and `wtree add release/2.1` from `origin/master`.
-Patterns are shell globs, the first matching line wins, and blank
-lines and `#` comments are ignored. Like `.wtree-hook`, the file is
-per-project and never git-tracked, so each repo can name its own
-production branch (`master`, `prod`, ...).
+`origin/staging`, and `wtree add release/2.1` from `origin/prod`, or
+from `origin/master` in a repo that has no `prod`. Patterns are shell
+globs, the first matching line wins, and within a line the first base
+that exists on origin wins. wtree only reads these lines, never runs
+them, so they work even if the hook isn't executable, and bash ignores
+them as comments when the hook does run.
 
 Rules only pick the start of a **new** branch:
 
@@ -179,8 +181,9 @@ Rules only pick the start of a **new** branch:
   over any rule.
 - A branch that already exists, locally or on origin, is checked out
   as-is and never moved onto the rule's base.
-- If the matched base doesn't exist on origin, `wtree add` stops with
-  an error instead of branching from the wrong place.
+- If none of the matched rule's bases exist on origin, `wtree add`
+  stops with an error instead of branching from the wrong place. Pass
+  a start point to get past it.
 - The base is only the starting point: the new branch doesn't track
   it, so `git pull` won't merge `master` into your release branch.
   `wtree pr` sets the branch's own upstream on first push.
